@@ -10,8 +10,17 @@ REPO="${2:-}"
 PR="${3:-}"
 POST="${4:-}"
 
+# Zero-credential fixture demo: runs the full pipeline on the bundled
+# repo-a/repo-b fixtures — no GitHub account, no AI, nothing to install.
+if [[ "$POST" == "--local" ]]; then
+  echo "==> running local fixture demo (no GitHub, no AI required)"
+  npm run dev -- review --owner acme --repo repo-a --pr 1 --local
+  echo "==> done. Fixture review saved under data/workspace/"
+  exit 0
+fi
+
 if [[ -z "$OWNER" || -z "$REPO" || -z "$PR" ]]; then
-  echo "Usage: scripts/demo.sh <owner> <repo> <pr> [--post]" >&2
+  echo "Usage: scripts/demo.sh <owner> <repo> <pr> [--post|--local]" >&2
   exit 1
 fi
 
