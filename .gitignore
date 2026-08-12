@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# local state (mirror clones, SQLite index, review workspaces)
+data/
+coverage/
+
+# logs
+*.log
+npm-debug.log*
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

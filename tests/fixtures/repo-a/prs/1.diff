@@ -1,0 +1,8 @@
+diff --git a/src/api.ts b/src/api.ts
+--- a/src/api.ts
++++ b/src/api.ts
+@@ -1,2 +1,2 @@
+-export function getUser(id: number): string {
++export function getUser(id: string): string {
+   return `user:${id}`;
+ }
