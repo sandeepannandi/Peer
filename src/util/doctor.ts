@@ -1,6 +1,5 @@
 import { execa } from 'execa';
 import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createApp } from '../github/app.js';
 import { openDb } from '../store/db.js';

@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, extname, join, relative, sep } from 'node:path';
 import type { Db } from '../store/db.js';
+import { JS_SYMBOL_RULES, type SymbolRule } from '../util/symbols.js';
 import {
   clearRepoFiles,
   getRepoId,
@@ -26,23 +27,9 @@ const LANG_BY_EXT: Record<string, string> = {
   '.java': 'java',
 };
 
-interface SymbolRule {
-  kind: string;
-  re: RegExp;
-}
-
-// Line-anchored declarations only — precision beats completeness.
-const JS_RULES: SymbolRule[] = [
-  { kind: 'function', re: /^(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/ },
-  { kind: 'class', re: /^(?:export\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/ },
-  { kind: 'interface', re: /^(?:export\s+)?interface\s+([A-Za-z_$][\w$]*)/ },
-  { kind: 'type', re: /^(?:export\s+)?type\s+([A-Za-z_$][\w$]*)/ },
-  { kind: 'const', re: /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/ },
-];
-
 const SYMBOL_RULES: Record<string, SymbolRule[]> = {
-  js: JS_RULES,
-  ts: JS_RULES,
+  js: JS_SYMBOL_RULES,
+  ts: JS_SYMBOL_RULES,
   py: [
     { kind: 'function', re: /^(?:async\s+)?def\s+([A-Za-z_]\w*)/ },
     { kind: 'class', re: /^class\s+([A-Za-z_]\w*)/ },

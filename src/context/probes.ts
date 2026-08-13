@@ -1,5 +1,6 @@
 import { posix } from 'node:path';
 import type { FileDiff } from '../util/diff.js';
+import { JS_SYMBOL_RULES } from '../util/symbols.js';
 
 export interface Probes {
   paths: string[];
@@ -9,13 +10,6 @@ export interface Probes {
   routes: string[];
   tables: string[];
 }
-
-const SYMBOL_RULES: Array<{ kind: string; re: RegExp }> = [
-  { kind: 'function', re: /^(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/ },
-  { kind: 'class', re: /^(?:export\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/ },
-  { kind: 'interface', re: /^(?:export\s+)?interface\s+([A-Za-z_$][\w$]*)/ },
-  { kind: 'const', re: /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/ },
-];
 
 const IMPORT_RES = [/(?:from|import)\s+['"]([^'"]+)['"]/, /require\(\s*['"]([^'"]+)['"]\s*\)/];
 
@@ -56,7 +50,7 @@ export function extractProbes(files: FileDiff[]): Probes {
         if (line.kind === 'context') continue;
         const text = line.text;
 
-        for (const rule of SYMBOL_RULES) {
+        for (const rule of JS_SYMBOL_RULES) {
           const m = rule.re.exec(text);
           if (m?.[1]) {
             symbols.add(m[1]);
