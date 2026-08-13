@@ -26,8 +26,7 @@ export interface FileDiff {
 
 const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 
-// Minimal custom parser, hunk-state gated: `---`/`+++`/`@@` are only headers
-// between hunks, so mid-hunk content can't be misread.
+// Hunk-state-gated parser: diff headers only count between hunks.
 export function parseUnifiedDiff(raw: string): FileDiff[] {
   const files: FileDiff[] = [];
   let file: FileDiff | null = null;
@@ -115,8 +114,7 @@ function marker(kind: DiffLineKind): string {
   return kind === 'added' ? '+' : kind === 'removed' ? '-' : ' ';
 }
 
-// Annotate new-file line numbers so reviewers can cite (file, line).
-// Removed lines carry no new-file number (blank column).
+// Annotate new-file line numbers (removed lines get a blank column).
 export function buildNumberedDiff(files: FileDiff[]): string {
   const out: string[] = [];
   for (const file of files) {

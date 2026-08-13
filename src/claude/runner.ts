@@ -18,8 +18,7 @@ export interface QueryFn {
   (params: { prompt: string; options?: Options }): AsyncIterable<SDKMessage>;
 }
 
-// Runs one headless Claude Code session (auth via `claude login`, never an API key)
-// and returns the final assistant text — the JSON review.
+// Headless Claude Code session (auth via `claude login`) → the final assistant text.
 export async function runClaudeReview(opts: ClaudeRunOptions, queryFn: QueryFn = query): Promise<string> {
   const stream = queryFn({
     prompt: opts.prompt,

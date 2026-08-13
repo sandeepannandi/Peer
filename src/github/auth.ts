@@ -12,10 +12,7 @@ export async function findInstallationForOrg(app: App, org: string): Promise<num
   return installation.id;
 }
 
-/**
- * Installation-scoped Octokit plus its short-lived token. The token is minted
- * per-run by @octokit/auth-app and used only for git clone/fetch URLs.
- */
+// Installation-scoped Octokit + short-lived token, minted per-run for git clone/fetch URLs.
 export async function createInstallationOctokit(
   app: App,
   org: string,

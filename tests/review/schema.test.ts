@@ -39,6 +39,64 @@ describe('parseReviewText', () => {
     expect(review.findings[0]?.evidence).toEqual([]);
   });
 
+  it('accepts strengths, finding category and suggestion', () => {
+    const review = parseReviewText(
+      JSON.stringify({
+        ...VALID_REVIEW,
+        strengths: ['Good error handling'],
+        findings: [
+          { ...VALID_REVIEW.findings[0]!, category: 'cross_repo', suggestion: 'Update the client.' },
+        ],
+      }),
+    );
+    expect(review.strengths).toEqual(['Good error handling']);
+    expect(review.findings[0]?.category).toBe('cross_repo');
+    expect(review.findings[0]?.suggestion).toBe('Update the client.');
+  });
+
+  it('defaults strengths to [] when omitted', () => {
+    const review = parseReviewText(JSON.stringify({ summary: 'ok', overall: 'approve', findings: [] }));
+    expect(review.strengths).toEqual([]);
+  });
+
+  it('strips emoji from all model-generated text', () => {
+    const review = parseReviewText(
+      JSON.stringify({
+        summary: 'Great ✅ work 🎉',
+        overall: 'comment',
+        strengths: ['Nice 🚀 improvements'],
+        findings: [
+          {
+            severity: 'warning',
+            file: 'a.ts',
+            title: 'Bug 🐛',
+            body: 'Fix this 🔧 issue',
+            suggestion: 'Do it ✨ now',
+            evidence: [{ repo: 'acme/r', file: 'f.ts', quote: 'call 💥 here' }],
+          },
+        ],
+      }),
+    );
+    expect(review.summary).toBe('Great work');
+    expect(review.strengths[0]).toBe('Nice improvements');
+    expect(review.findings[0]?.title).toBe('Bug');
+    expect(review.findings[0]?.body).toBe('Fix this issue');
+    expect(review.findings[0]?.suggestion).toBe('Do it now');
+    expect(review.findings[0]?.evidence[0]?.quote).toBe('call here');
+  });
+
+  it('rejects an invalid category', () => {
+    expect(() =>
+      parseReviewText(
+        JSON.stringify({
+          summary: 'x',
+          overall: 'approve',
+          findings: [{ severity: 'info', file: 'a.ts', title: 't', body: 'b', category: 'not-a-category' }],
+        }),
+      ),
+    ).toThrow();
+  });
+
   it('rejects invalid JSON', () => {
     expect(() => parseReviewText('this is not json')).toThrow();
   });

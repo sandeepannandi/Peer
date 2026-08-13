@@ -26,10 +26,12 @@ export function runLocalReviewer(workspaceDir: string, files: FileDiff[], prLabe
           if (matches.length === 0) continue;
           findings.push({
             severity: 'warning',
+            category: 'cross_repo',
             file: file.path,
             line: line.newLine,
             title: `Symbol ${symbol.name} is also used in other repositories`,
             body: 'This symbol added in the PR also appears in files from other repos in the context pack — verify the change does not break those consumers.',
+            suggestion: 'Confirm the change is compatible with every consumer listed in the evidence, and update them if the contract changed.',
             evidence: matches.slice(0, 5).map((c) => ({
               repo: c.repo,
               file: c.file,
@@ -45,6 +47,10 @@ export function runLocalReviewer(workspaceDir: string, files: FileDiff[], prLabe
   return {
     summary: `Local fixture review of ${prLabel}: ${files.length} file(s) changed, ${context.length} context file(s) examined.`,
     overall: findings.length > 0 ? 'changes_requested' : 'approve',
+    strengths:
+      findings.length > 0
+        ? ['Findings are grounded in cross-repo evidence from the context pack.']
+        : ['Change is small and self-contained; no cross-repo impact detected.'],
     findings,
   };
 }

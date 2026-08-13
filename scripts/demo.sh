@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# One-command demo (PLAN.md §20): mirror + index + review a real PR.
+# One-command demo: mirror + index + review a real PR.
 # Usage: scripts/demo.sh <owner> <repo> <pr> [--post]
 #   e.g.  scripts/demo.sh acme api 42 --post
 

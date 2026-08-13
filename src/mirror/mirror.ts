@@ -56,8 +56,7 @@ export async function listOrgRepos(octokit: InstallationOctokit, owner: string):
     .map((repo) => ({ name: repo.name, default_branch: repo.default_branch ?? null }));
 }
 
-// Shallow clone (or refresh) into {mirrorRoot}/{owner}/{name}. The token is
-// stripped from the origin remote so it never persists in .git/config.
+// Shallow clone (or refresh); the token is stripped from origin so it never persists.
 export async function mirrorRepo(options: MirrorRepoOptions): Promise<MirrorRepoResult> {
   const { owner, name, defaultBranch, token, mirrorRoot, remote } = options;
   const target = join(mirrorRoot, owner, name);

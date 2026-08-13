@@ -12,6 +12,9 @@ describe('buildReviewSystemPrompt', () => {
     expect(prompt).toContain('"severity"');
     expect(prompt).toContain('evidence');
     expect(prompt).toContain('At most 20 findings');
+    expect(prompt).toContain('"strengths"');
+    expect(prompt).toContain('"category"');
+    expect(prompt).toContain('"suggestion"');
   });
 });
 

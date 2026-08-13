@@ -43,10 +43,7 @@ export const EnvSchema = z
 
 export type Env = z.infer<typeof EnvSchema>;
 
-/**
- * Load and validate config. Fails fast if ANTHROPIC_API_KEY is set: reviews
- * run through Claude Code (subscription), never the Anthropic API.
- */
+// Load and validate config; fail fast if ANTHROPIC_API_KEY is set (Claude Code only).
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   if (source.ANTHROPIC_API_KEY) {
     throw new Error(

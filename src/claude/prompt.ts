@@ -17,18 +17,25 @@ Review the given pull request against the provided cross-repo context pack. Focu
 
 Ground every finding in evidence that actually exists in the workspace. Never invent files, line numbers, or quotes. If nothing is wrong, return an empty findings list.
 
+Summary: write 2–4 sentences — what the PR changes, the main risks, and your overall assessment.
+
+strengths: always list 1–3 things the change does well (clear naming, tests, safety, correct use of org patterns…). Even a fully approved PR lists strengths.
+
 Reply with ONLY a single JSON object matching this exact schema:
 
 {
   "summary": "string",
   "overall": "changes_requested" | "comment" | "approve",
+  "strengths": ["string"],
   "findings": [
     {
       "severity": "error" | "warning" | "info",
+      "category": "bug_risk" | "performance" | "security" | "correctness" | "style" | "maintainability" | "cross_repo",
       "file": "string",
       "line": 12,
       "title": "string",
       "body": "string",
+      "suggestion": "string",
       "evidence": [
         { "repo": "org/repo", "file": "string", "line": 4, "quote": "string" }
       ]
@@ -38,6 +45,8 @@ Reply with ONLY a single JSON object matching this exact schema:
 
 Rules:
 - findings[].file / findings[].line refer to the NEW file and its line number as annotated in diff.txt.
+- findings[].category: pick the closest match; cross_repo for contract/consumer issues across repositories.
+- findings[].suggestion: a concrete, actionable fix (short code snippet or precise instruction).
 - evidence[].repo must be "org/repo"; only cite files present in the workspace.
 - Omit "line" when a finding is file-level; omit "evidence" when there is no citation.
 - At most 20 findings and at most 5 evidence entries per finding.`;

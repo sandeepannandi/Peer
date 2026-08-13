@@ -17,7 +17,7 @@ const DIFF = [
 const files = parseUnifiedDiff(DIFF);
 
 function review(overall: Review['overall'] = 'comment', findings: Finding[] = []): Review {
-  return { summary: 'Summary', overall, findings };
+  return { summary: 'Summary', overall, strengths: [], findings };
 }
 
 describe('formatReview', () => {
@@ -78,6 +78,46 @@ describe('formatReview', () => {
     expect(formatReview(review('comment'), files, 20).event).toBe('COMMENT');
     expect(formatReview(review('approve'), files, 20).event).toBe('COMMENT');
   });
+
+  it('renders strengths, dropped findings with category/suggestion, and a footer in the body', () => {
+    const droppedFinding: Finding = {
+      severity: 'warning',
+      category: 'cross_repo',
+      file: 'src/api.ts',
+      title: 'Breaks consumers',
+      body: 'web-client uses the old shape.',
+      suggestion: 'Update web-client to the new shape.',
+      evidence: [],
+    };
+    const rich = { summary: 'Summary', overall: 'comment' as const, strengths: ['Nice naming'], findings: [droppedFinding] };
+
+    const body = formatReview(rich, files, 0).body;
+
+    expect(body).toContain('What’s good');
+    expect(body).toContain('Nice naming');
+    expect(body).toContain('Breaks consumers');
+    expect(body).toContain('cross_repo');
+    expect(body).toContain('Suggestion: Update web-client');
+    expect(body).toContain('Reviewed by Peer');
+  });
+
+  it('includes category and suggestion in an inline comment body', () => {
+    const finding: Finding = {
+      severity: 'error',
+      category: 'bug_risk',
+      file: 'src/api.ts',
+      line: 2,
+      title: 'Race',
+      body: 'Shared mutable state.',
+      suggestion: 'Guard with a mutex.',
+      evidence: [],
+    };
+
+    const result = formatReview(review('changes_requested', [finding]), files, 20);
+
+    expect(result.comments[0]!.body).toContain('bug_risk');
+    expect(result.comments[0]!.body).toContain('Guard with a mutex');
+  });
 });
 
 describe('buildReviewMarkdown', () => {
@@ -97,5 +137,18 @@ describe('buildReviewMarkdown', () => {
     expect(md).toContain('## [error] T');
     expect(md).toContain('src/api.ts:2');
     expect(md).toContain('acme/web/src/client.ts');
+  });
+
+  it('renders strengths and a footer in the markdown report', () => {
+    const rich = {
+      summary: 'Summary',
+      overall: 'approve' as const,
+      strengths: ['Small, focused change'],
+      findings: [],
+    };
+    const md = buildReviewMarkdown(rich, files, 20);
+    expect(md).toContain('What’s good');
+    expect(md).toContain('Small, focused change');
+    expect(md).toContain('Reviewed by Peer');
   });
 });

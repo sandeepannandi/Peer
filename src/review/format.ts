@@ -67,6 +67,8 @@ function toComment(finding: Finding, anchored: Map<string, Set<number>>): Review
 
 function commentBody(finding: Finding): string {
   const lines = [`**${finding.title}**`, finding.body];
+  if (finding.category) lines.push(`**Category:** \`${finding.category}\``);
+  if (finding.suggestion) lines.push(`**Suggestion:** ${finding.suggestion}`);
   for (const e of finding.evidence) {
     const loc = `${e.repo}/${e.file}${e.line ? `:${e.line}` : ''}`;
     lines.push(`> Evidence: \`${loc}\`${e.quote ? ` — "${e.quote}"` : ''}`);
@@ -74,28 +76,40 @@ function commentBody(finding: Finding): string {
   return lines.join('\n\n');
 }
 
+// Review body: summary, strengths, and findings that could not be anchored inline.
 export function buildReviewBody(review: Review, dropped: Finding[]): string {
   const parts = [review.summary];
+  if (review.strengths.length > 0) {
+    parts.push('## What’s good', ...review.strengths.map((s) => `- ${s}`));
+  }
   if (dropped.length > 0) {
-    parts.push('Additional findings:');
+    parts.push('## Findings');
     for (const f of dropped) {
-      parts.push(`- **[${f.severity}] ${f.title}** — ${f.body}`);
+      const cat = f.category ? ` \`${f.category}\`` : '';
+      parts.push(`- **[${f.severity}]${cat} ${f.title}** — ${f.body}${f.suggestion ? `\n  - Suggestion: ${f.suggestion}` : ''}`);
     }
   }
+  parts.push('---', '_Reviewed by Peer (cross-repo context)._');
   return parts.join('\n\n');
 }
 
-/** Local report written to the workspace when not posting (PLAN 6.9). */
+/** Local report written to the workspace when not posting. */
 export function buildReviewMarkdown(review: Review, files: FileDiff[], maxComments: number): string {
   const formatted = formatReview(review, files, maxComments);
   const parts = [`# Code Review (${formatted.event})`, review.summary, ''];
+  if (review.strengths.length > 0) {
+    parts.push('## What’s good', ...review.strengths.map((s) => `- ${s}`), '');
+  }
   for (const f of review.findings) {
     const loc = f.line ? `${f.file}:${f.line}` : f.file;
     parts.push(`## [${f.severity}] ${f.title} — ${loc}`, f.body);
+    if (f.category) parts.push(`- Category: \`${f.category}\``);
+    if (f.suggestion) parts.push(`- Suggestion: ${f.suggestion}`);
     for (const e of f.evidence) {
       parts.push(`- Evidence: ${e.repo}/${e.file}${e.line ? `:${e.line}` : ''}${e.quote ? ` — "${e.quote}"` : ''}`);
     }
     parts.push('');
   }
+  parts.push('---', '_Reviewed by Peer (cross-repo context)._');
   return parts.join('\n');
 }
