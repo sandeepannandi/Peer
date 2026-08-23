@@ -4,7 +4,8 @@ import { extractSymbols } from '../mirror/indexer.js';
 import type { Finding, Review } from '../review/schema.js';
 import type { FileDiff } from '../util/diff.js';
 
-/** Deterministic local reviewer: finds symbols added in the diff that also appear in the context pack. */
+/** Deterministic stub reviewer for --local mode: finds symbols added in the diff that also appear in the context pack.
+ *  This is NOT the real AI reviewer — it is a lightweight substring matcher used for zero-credential testing. */
 
 interface ContextFile {
   repo: string;

@@ -61,7 +61,7 @@ program
   .requiredOption('--repo <repo>', 'Repository name')
   .requiredOption('--pr <number>', 'Pull request number', parsePositiveInt)
   .option('--post', 'Post the review to GitHub as a PR review (default: save locally)')
-  .option('--local', 'Run against local fixture repos (no GitHub, no Claude)')
+  .option('--local', 'Run retrieval and context packing against bundled fixtures, then deterministic stub review (no GitHub, no Claude)')
   .option('--fixtures <dir>', 'Fixtures directory for --local mode', 'tests/fixtures')
   .action(async (opts: ReviewOptions) => {
     const env = loadEnv();

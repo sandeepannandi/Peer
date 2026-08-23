@@ -2,8 +2,10 @@ import { query, type Options, type SDKMessage } from '@anthropic-ai/claude-agent
 import type { Env } from '../config/env.js';
 import { parseReviewText, type Review } from '../review/schema.js';
 
-// Claude can analyse the workspace but never modify it.
-const READ_ONLY_TOOLS = ['Read', 'Grep', 'Glob', 'Bash(git:*)'] as const;
+// The review agent may inspect/analyse the workspace but must not have
+// arbitrary shell execution or modification capability. Bash is blocked
+// via disallowedTools; only Read, Grep, and Glob are available.
+const READ_ONLY_TOOLS = ['Read', 'Grep', 'Glob'] as const;
 
 export interface ClaudeRunOptions {
   env: Env;
@@ -27,6 +29,7 @@ export async function runClaudeReview(opts: ClaudeRunOptions, queryFn: QueryFn =
       model: opts.env.CLAUDE_MODEL,
       cwd: opts.workspaceDir,
       allowedTools: [...READ_ONLY_TOOLS],
+      disallowedTools: ['Bash'],
       permissionMode: 'bypassPermissions',
       maxTurns: opts.env.CLAUDE_MAX_TURNS,
     },

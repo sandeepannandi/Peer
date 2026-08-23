@@ -55,7 +55,8 @@ describe('runClaudeReview', () => {
     expect(options?.systemPrompt).toBe('system');
     expect(options?.model).toBe('sonnet');
     expect(options?.cwd).toBe(workspaceDir);
-    expect(options?.allowedTools).toEqual(['Read', 'Grep', 'Glob', 'Bash(git:*)']);
+    expect(options?.allowedTools).toEqual(['Read', 'Grep', 'Glob']);
+    expect(options?.disallowedTools).toEqual(['Bash']);
     expect(options?.permissionMode).toBe('bypassPermissions');
     expect(options?.maxTurns).toBe(30);
   });

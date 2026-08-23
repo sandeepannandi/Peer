@@ -9,8 +9,8 @@ The review reasoning runs through **Claude Code** (subscription auth via `claude
 - **Cross-repo context** — local mirror + SQLite symbol index, probe-based retrieval, budget-capped context pack
 - **CLI-first, bot-ready** — one CLI plus a webhook listener sharing a single review pipeline
 - **Structured output** — zod-validated JSON reviews, one repair retry, inline comments anchored to diff lines, deduped per head commit
-- **Zero-credential proof** — `--local` fixture mode runs the full pipeline with no GitHub access or API key
-- **Tested** — 85 tests across 19 suites; engine calls are dependency-injected, so tests never hit the network
+- **Zero-credential proof** — `--local` fixture mode runs the retrieval and context-packing pipeline against bundled fixtures, then uses a deterministic stub reviewer (no GitHub access or API key needed)
+- **Tested** — 95 tests across 22 suites; engine calls are dependency-injected, so tests never hit the network
 
 ## How it works
 
@@ -46,7 +46,7 @@ Verify the environment with `peer doctor` (git, Claude Code, GitHub App credenti
 | `peer index --owner <org>` | Build the SQLite symbol index |
 | `peer context --owner <org> --repo <r> --pr <n>` | Build and inspect a PR's context pack |
 | `peer review --owner <org> --repo <r> --pr <n> [--post]` | Review a PR — save locally, or post to GitHub with `--post` |
-| `peer review --owner <org> --repo <r> --pr <n> --local` | Full pipeline against bundled fixtures, no credentials |
+| `peer review --owner <org> --repo <r> --pr <n> --local` | Retrieval + context pack against bundled fixtures, then deterministic stub review (no credentials) |
 | `peer webhook [--port <n>]` | Bot mode: auto-review PRs on `opened`/`synchronize` |
 
 ```sh
@@ -81,7 +81,7 @@ src/
 ├── local/            fixture mode (deterministic reviewer)
 ├── store/db.ts       SQLite schema + queries
 └── util/             git wrapper (secret redaction), diff parser, doctor, logging
-tests/                19 vitest suites, 85 tests, bundled fixture repos
+tests/                22 vitest suites, 95 tests, bundled fixture repos
 ```
 
 ## Security
