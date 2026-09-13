@@ -3,9 +3,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { loadEnv } from '../../src/config/env.js';
-import { createWebhookHandler, parsePullRequestPayload, type PullRequestEvent } from '../../src/webhook/server.js';
+import {
+  createWebhookHandler,
+  parsePullRequestPayload,
+  type PullRequestEvent,
+} from '../../src/webhook/server.js';
 
 let root: string;
 let env: ReturnType<typeof loadEnv>;
@@ -73,7 +76,10 @@ describe('createWebhookHandler', () => {
 
   it('dispatches a valid pull_request opened event to the review callback', async () => {
     const calls: PullRequestEvent[] = [];
-    const handler = createWebhookHandler(env, vi.fn(async (e: PullRequestEvent) => void calls.push(e)));
+    const handler = createWebhookHandler(
+      env,
+      vi.fn(async (e: PullRequestEvent) => void calls.push(e)),
+    );
     const status = await runHandler(handler, PR_PAYLOAD, {
       'x-hub-signature-256': sign(PR_PAYLOAD),
       'x-github-event': 'pull_request',
@@ -84,7 +90,10 @@ describe('createWebhookHandler', () => {
 
   it('rejects a request with an invalid signature', async () => {
     const calls: PullRequestEvent[] = [];
-    const handler = createWebhookHandler(env, vi.fn(async (e: PullRequestEvent) => void calls.push(e)));
+    const handler = createWebhookHandler(
+      env,
+      vi.fn(async (e: PullRequestEvent) => void calls.push(e)),
+    );
     const status = await runHandler(handler, PR_PAYLOAD, {
       'x-hub-signature-256': 'sha256=deadbeef',
       'x-github-event': 'pull_request',
@@ -95,7 +104,10 @@ describe('createWebhookHandler', () => {
 
   it('ignores non-pull_request events (ping, push, etc.)', async () => {
     const calls: PullRequestEvent[] = [];
-    const handler = createWebhookHandler(env, vi.fn(async (e: PullRequestEvent) => void calls.push(e)));
+    const handler = createWebhookHandler(
+      env,
+      vi.fn(async (e: PullRequestEvent) => void calls.push(e)),
+    );
     const status = await runHandler(handler, JSON.stringify({ zen: 'hello' }), {
       'x-hub-signature-256': sign(JSON.stringify({ zen: 'hello' })),
       'x-github-event': 'ping',
@@ -106,7 +118,10 @@ describe('createWebhookHandler', () => {
 
   it('rejects a request body over 1MB', async () => {
     const calls: PullRequestEvent[] = [];
-    const handler = createWebhookHandler(env, vi.fn(async (e: PullRequestEvent) => void calls.push(e)));
+    const handler = createWebhookHandler(
+      env,
+      vi.fn(async (e: PullRequestEvent) => void calls.push(e)),
+    );
     const huge = `x`.repeat(1024 * 1024 + 1);
     const status = await runHandler(handler, huge, {
       'x-hub-signature-256': sign(huge),
@@ -118,7 +133,10 @@ describe('createWebhookHandler', () => {
 
   it('ignores pull_request actions other than opened/synchronize', async () => {
     const calls: PullRequestEvent[] = [];
-    const handler = createWebhookHandler(env, vi.fn(async (e: PullRequestEvent) => void calls.push(e)));
+    const handler = createWebhookHandler(
+      env,
+      vi.fn(async (e: PullRequestEvent) => void calls.push(e)),
+    );
     const closed = JSON.parse(PR_PAYLOAD) as Record<string, unknown>;
     closed.action = 'closed';
     const body = JSON.stringify(closed);

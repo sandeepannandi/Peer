@@ -1,8 +1,7 @@
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
 import { runGit } from '../../src/util/exec.js';
 
 let root: string;
@@ -22,7 +21,14 @@ describe('runGit', () => {
       // Fails fast: -C points at a non-repo directory, but the command args
       // still contain the tokenized URL that must never reach logs.
       await runGit(
-        ['-C', root, 'remote', 'set-url', 'origin', 'https://x-access-token:supersecret@github.com/a/b.git'],
+        [
+          '-C',
+          root,
+          'remote',
+          'set-url',
+          'origin',
+          'https://x-access-token:supersecret@github.com/a/b.git',
+        ],
         { redact: ['supersecret'] },
       );
     } catch (err) {

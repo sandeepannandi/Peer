@@ -2,7 +2,6 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
 import { extractSymbols, indexRepos } from '../../src/mirror/indexer.js';
 import { listReposByOwner, openDb, upsertRepo, type Db } from '../../src/store/db.js';
 
@@ -43,7 +42,9 @@ describe('extractSymbols', () => {
   });
 
   it('extracts Python and Go symbols', () => {
-    expect(extractSymbols('py', 'async def fetch_user(user_id):\n    pass\nclass Store:\n    pass')).toEqual([
+    expect(
+      extractSymbols('py', 'async def fetch_user(user_id):\n    pass\nclass Store:\n    pass'),
+    ).toEqual([
       { kind: 'function', name: 'fetch_user', line: 1 },
       { kind: 'class', name: 'Store', line: 3 },
     ]);

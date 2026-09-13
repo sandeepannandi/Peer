@@ -21,7 +21,9 @@ export const EnvSchema = z
 
     // Paths / logging
     DATA_DIR: z.string().min(1).default('./data'),
-    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+    LOG_LEVEL: z
+      .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+      .default('info'),
   })
   .superRefine((env, ctx) => {
     const keyPath = env.GITHUB_PRIVATE_KEY_PATH;

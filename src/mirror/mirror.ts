@@ -49,7 +49,10 @@ function cleanUrl(owner: string, name: string): string {
   return `https://github.com/${owner}/${name}.git`;
 }
 
-export async function listOrgRepos(octokit: InstallationOctokit, owner: string): Promise<OrgRepo[]> {
+export async function listOrgRepos(
+  octokit: InstallationOctokit,
+  owner: string,
+): Promise<OrgRepo[]> {
   const repos = await octokit.paginate('GET /installation/repositories', { per_page: 100 });
   return repos
     .filter((repo) => repo.owner.login === owner)
@@ -84,7 +87,9 @@ export async function mirrorRepo(options: MirrorRepoOptions): Promise<MirrorRepo
   return { cloned: true, branch: defaultBranch };
 }
 
-export async function mirrorOrgRepos(options: MirrorOrgReposOptions): Promise<MirrorOrgReposResult> {
+export async function mirrorOrgRepos(
+  options: MirrorOrgReposOptions,
+): Promise<MirrorOrgReposResult> {
   const { octokit, token, owner, mirrorRoot, db, remoteFor } = options;
   const repos = await listOrgRepos(octokit, owner);
   const result: MirrorOrgReposResult = { mirrored: [], skipped: [], failed: [] };

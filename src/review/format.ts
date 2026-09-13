@@ -16,7 +16,11 @@ export interface FormattedReview {
   dropped: Finding[];
 }
 
-export function formatReview(review: Review, files: FileDiff[], maxComments: number): FormattedReview {
+export function formatReview(
+  review: Review,
+  files: FileDiff[],
+  maxComments: number,
+): FormattedReview {
   const anchored = anchoredLines(files);
   const comments: ReviewComment[] = [];
   const dropped: Finding[] = [];
@@ -86,7 +90,9 @@ export function buildReviewBody(review: Review, dropped: Finding[]): string {
     parts.push('## Findings');
     for (const f of dropped) {
       const cat = f.category ? ` \`${f.category}\`` : '';
-      parts.push(`- **[${f.severity}]${cat} ${f.title}** — ${f.body}${f.suggestion ? `\n  - Suggestion: ${f.suggestion}` : ''}`);
+      parts.push(
+        `- **[${f.severity}]${cat} ${f.title}** — ${f.body}${f.suggestion ? `\n  - Suggestion: ${f.suggestion}` : ''}`,
+      );
     }
   }
   parts.push('---', '_Reviewed by Peer (cross-repo context)._');
@@ -94,7 +100,11 @@ export function buildReviewBody(review: Review, dropped: Finding[]): string {
 }
 
 /** Local report written to the workspace when not posting. */
-export function buildReviewMarkdown(review: Review, files: FileDiff[], maxComments: number): string {
+export function buildReviewMarkdown(
+  review: Review,
+  files: FileDiff[],
+  maxComments: number,
+): string {
   const formatted = formatReview(review, files, maxComments);
   const parts = [`# Code Review (${formatted.event})`, review.summary, ''];
   if (review.strengths.length > 0) {
@@ -106,7 +116,9 @@ export function buildReviewMarkdown(review: Review, files: FileDiff[], maxCommen
     if (f.category) parts.push(`- Category: \`${f.category}\``);
     if (f.suggestion) parts.push(`- Suggestion: ${f.suggestion}`);
     for (const e of f.evidence) {
-      parts.push(`- Evidence: ${e.repo}/${e.file}${e.line ? `:${e.line}` : ''}${e.quote ? ` — "${e.quote}"` : ''}`);
+      parts.push(
+        `- Evidence: ${e.repo}/${e.file}${e.line ? `:${e.line}` : ''}${e.quote ? ` — "${e.quote}"` : ''}`,
+      );
     }
     parts.push('');
   }

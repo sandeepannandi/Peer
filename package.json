@@ -15,8 +15,13 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "ci": "npm run typecheck && npm run lint && npm run format:check && npm test"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.227",
@@ -30,10 +35,16 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.17.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^20.19.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.31.0",
+    "prettier": "^3.4.0",
     "tsx": "^4.23.12",
     "typescript": "^5.9.0",
+    "typescript-eslint": "^8.68.0",
     "vitest": "^2.1.0"
   }
 }

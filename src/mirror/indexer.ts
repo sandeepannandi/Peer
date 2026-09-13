@@ -1,7 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, extname, join, relative, sep } from 'node:path';
 import type { Db } from '../store/db.js';
-import { JS_SYMBOL_RULES, type SymbolRule } from '../util/symbols.js';
 import {
   clearRepoFiles,
   getRepoId,
@@ -10,6 +9,7 @@ import {
   listReposByOwner,
   markRepoIndexed,
 } from '../store/db.js';
+import { JS_SYMBOL_RULES, type SymbolRule } from '../util/symbols.js';
 
 const MAX_SYMBOL_FILE_BYTES = 512 * 1024;
 

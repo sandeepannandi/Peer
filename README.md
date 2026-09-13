@@ -16,7 +16,7 @@ The review reasoning runs through **Claude Code** (subscription auth via `claude
 
 1. **Mirror** — shallow-clones the org's repositories and indexes their files and symbols into SQLite.
 2. **Probe** — parses the PR diff into a numbered diff and extracts probe terms: symbols, imports, routes, tables.
-3. **Context pack** — finds matching files in the *other* repos, ranks them, and stages the top files next to the numbered diff (capped by count and token budget), plus org pattern files (`AGENTS.md`, `README.md`).
+3. **Context pack** — finds matching files in the _other_ repos, ranks them, and stages the top files next to the numbered diff (capped by count and token budget), plus org pattern files (`AGENTS.md`, `README.md`).
 4. **Review** — Claude Code reviews the diff against the pack and returns a single JSON review: summary, verdict, strengths, and findings with severity, category, file, line, suggestion, and cross-repo evidence.
 5. **Post** — the JSON is schema-validated, findings are anchored to real new-file lines, and the review is posted as inline comments (or saved locally without `--post`).
 
@@ -32,22 +32,26 @@ The review reasoning runs through **Claude Code** (subscription auth via `claude
 npm install
 cp .env.example .env     # then fill in your credentials
 npm run typecheck
+npm run lint
+npm run format:check
 npm test
 ```
+
+Run the combined quality gate with `npm run ci`.
 
 Verify the environment with `peer doctor` (git, Claude Code, GitHub App credentials, SQLite).
 
 ## Usage
 
-| Command | Description |
-|---|---|
-| `peer doctor` | Environment health check |
-| `peer mirror --owner <org>` | Clone/refresh the org's repositories |
-| `peer index --owner <org>` | Build the SQLite symbol index |
-| `peer context --owner <org> --repo <r> --pr <n>` | Build and inspect a PR's context pack |
-| `peer review --owner <org> --repo <r> --pr <n> [--post]` | Review a PR — save locally, or post to GitHub with `--post` |
-| `peer review --owner <org> --repo <r> --pr <n> --local` | Retrieval + context pack against bundled fixtures, then deterministic stub review (no credentials) |
-| `peer webhook [--port <n>]` | Bot mode: auto-review PRs on `opened`/`synchronize` |
+| Command                                                  | Description                                                                                        |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `peer doctor`                                            | Environment health check                                                                           |
+| `peer mirror --owner <org>`                              | Clone/refresh the org's repositories                                                               |
+| `peer index --owner <org>`                               | Build the SQLite symbol index                                                                      |
+| `peer context --owner <org> --repo <r> --pr <n>`         | Build and inspect a PR's context pack                                                              |
+| `peer review --owner <org> --repo <r> --pr <n> [--post]` | Review a PR — save locally, or post to GitHub with `--post`                                        |
+| `peer review --owner <org> --repo <r> --pr <n> --local`  | Retrieval + context pack against bundled fixtures, then deterministic stub review (no credentials) |
+| `peer webhook [--port <n>]`                              | Bot mode: auto-review PRs on `opened`/`synchronize`                                                |
 
 ```sh
 npm run dev -- review --owner acme --repo repo-a --pr 1 --local
@@ -56,15 +60,15 @@ npm run dev -- review --owner acme --repo repo-a --pr 1 --local
 
 ## Configuration
 
-| Variable | Purpose |
-|---|---|
-| `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY_PATH` / `GITHUB_PRIVATE_KEY` | GitHub App credentials (one key source only) |
-| `GITHUB_ORG` | Org whose repos are mirrored (defaults to the PR owner) |
-| `GITHUB_WEBHOOK_SECRET`, `WEBHOOK_PORT` | Webhook bot mode |
-| `CLAUDE_MODEL`, `CLAUDE_MAX_TURNS` | Review engine (default `sonnet`, max 30 turns) |
-| `REVIEW_MAX_CONTEXT_FILES`, `CONTEXT_TOKEN_BUDGET` | Context-pack sizing (defaults 12 files / 40k chars) |
-| `MAX_REVIEW_COMMENTS` | Inline-comment cap (default 20) |
-| `DATA_DIR`, `LOG_LEVEL` | Paths and logging |
+| Variable                                                          | Purpose                                                 |
+| ----------------------------------------------------------------- | ------------------------------------------------------- |
+| `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY_PATH` / `GITHUB_PRIVATE_KEY` | GitHub App credentials (one key source only)            |
+| `GITHUB_ORG`                                                      | Org whose repos are mirrored (defaults to the PR owner) |
+| `GITHUB_WEBHOOK_SECRET`, `WEBHOOK_PORT`                           | Webhook bot mode                                        |
+| `CLAUDE_MODEL`, `CLAUDE_MAX_TURNS`                                | Review engine (default `sonnet`, max 30 turns)          |
+| `REVIEW_MAX_CONTEXT_FILES`, `CONTEXT_TOKEN_BUDGET`                | Context-pack sizing (defaults 12 files / 40k chars)     |
+| `MAX_REVIEW_COMMENTS`                                             | Inline-comment cap (default 20)                         |
+| `DATA_DIR`, `LOG_LEVEL`                                           | Paths and logging                                       |
 
 ## Project structure
 

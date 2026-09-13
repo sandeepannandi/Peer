@@ -1,0 +1,8 @@
+dist
+node_modules
+data
+.env
+*.pem
+coverage
+.kilo
+tests/fixtures

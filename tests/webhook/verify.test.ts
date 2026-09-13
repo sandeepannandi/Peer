@@ -1,6 +1,5 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-
 import { verifySignature } from '../../src/webhook/verify.js';
 
 const SECRET = 'webhook-secret';

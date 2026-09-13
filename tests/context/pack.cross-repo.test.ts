@@ -1,10 +1,17 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
-import { extractProbes } from '../../src/context/probes.js';
 import { buildContextPack } from '../../src/context/pack.js';
+import { extractProbes } from '../../src/context/probes.js';
 import { findContextFiles } from '../../src/context/search.js';
 import { runLocalReviewer } from '../../src/local/reviewer.js';
 import { indexRepos } from '../../src/mirror/indexer.js';
@@ -47,16 +54,22 @@ describe('cross-repo integration: retrieval → packing → reviewer', () => {
     upsertRepo(db, { owner: 'acme', name: 'unrelated', defaultBranch: 'main' });
 
     // repo-a: PR changes getUser signature
-    writeFileSync(join(repoDir('repo-a'), 'src', 'api.ts'),
-      'export function getUser(id: string): string { return `user:${id}`; }\n');
+    writeFileSync(
+      join(repoDir('repo-a'), 'src', 'api.ts'),
+      'export function getUser(id: string): string { return `user:${id}`; }\n',
+    );
 
     // repo-b: consumer of getUser — this is the cross-repo dependency
-    writeFileSync(join(repoDir('repo-b'), 'src', 'client.ts'),
-      'export function fetchProfile(id: string): string { return getUser(id); }\n');
+    writeFileSync(
+      join(repoDir('repo-b'), 'src', 'client.ts'),
+      'export function fetchProfile(id: string): string { return getUser(id); }\n',
+    );
 
     // unrelated: has a large README but no symbol overlap
-    writeFileSync(join(repoDir('unrelated'), 'README.md'),
-      '# Unrelated\n' + 'z'.repeat(5_000) + '\n');
+    writeFileSync(
+      join(repoDir('unrelated'), 'README.md'),
+      '# Unrelated\n' + 'z'.repeat(5_000) + '\n',
+    );
 
     indexRepos(db, mirrorRoot, 'acme');
 
@@ -86,9 +99,14 @@ describe('cross-repo integration: retrieval → packing → reviewer', () => {
 
     // ── Step 3: Packing retains the cross-repo files ──
     const pack = buildContextPack({
-      db, mirrorRoot, owner: 'acme', prRepo: 'repo-a',
+      db,
+      mirrorRoot,
+      owner: 'acme',
+      prRepo: 'repo-a',
       numberedDiff: buildNumberedDiff(fileDiffs),
-      probes, budgetChars: 40_000, workspaceRoot,
+      probes,
+      budgetChars: 40_000,
+      workspaceRoot,
     });
 
     const files = contextFileNames(pack.dir);
@@ -120,8 +138,10 @@ describe('cross-repo integration: retrieval → packing → reviewer', () => {
     upsertRepo(db, { owner: 'acme', name: 'repo-c', defaultBranch: 'main' });
 
     // repo-b has relevant source code.
-    writeFileSync(join(repoDir('repo-b'), 'src', 'handler.ts'),
-      'export function handleEvent(evt: string) { processEvent(evt); }\n');
+    writeFileSync(
+      join(repoDir('repo-b'), 'src', 'handler.ts'),
+      'export function handleEvent(evt: string) { processEvent(evt); }\n',
+    );
 
     // repo-c has only large pattern files (no relevant code).
     writeFileSync(join(repoDir('repo-c'), 'README.md'), 'x'.repeat(20_000));
@@ -144,9 +164,14 @@ describe('cross-repo integration: retrieval → packing → reviewer', () => {
     const probes = extractProbes(fileDiffs);
 
     const pack = buildContextPack({
-      db, mirrorRoot, owner: 'acme', prRepo: 'repo-a',
+      db,
+      mirrorRoot,
+      owner: 'acme',
+      prRepo: 'repo-a',
       numberedDiff: buildNumberedDiff(fileDiffs),
-      probes, budgetChars: 40_000, workspaceRoot,
+      probes,
+      budgetChars: 40_000,
+      workspaceRoot,
     });
 
     const files = contextFileNames(pack.dir);

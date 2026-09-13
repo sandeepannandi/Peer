@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-
 import type { InstallationOctokit } from '../../src/github/auth.js';
 import { fetchPr } from '../../src/github/pr.js';
 

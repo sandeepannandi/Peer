@@ -32,7 +32,8 @@ export function runLocalReviewer(workspaceDir: string, files: FileDiff[], prLabe
             line: line.newLine,
             title: `Symbol ${symbol.name} is also used in other repositories`,
             body: 'This symbol added in the PR also appears in files from other repos in the context pack — verify the change does not break those consumers.',
-            suggestion: 'Confirm the change is compatible with every consumer listed in the evidence, and update them if the contract changed.',
+            suggestion:
+              'Confirm the change is compatible with every consumer listed in the evidence, and update them if the contract changed.',
             evidence: matches.slice(0, 5).map((c) => ({
               repo: c.repo,
               file: c.file,
@@ -69,5 +70,8 @@ function readContextFiles(contextDir: string): ContextFile[] {
 }
 
 function firstLineWith(content: string, needle: string): string | undefined {
-  return content.split('\n').find((line) => line.includes(needle))?.trim();
+  return content
+    .split('\n')
+    .find((line) => line.includes(needle))
+    ?.trim();
 }

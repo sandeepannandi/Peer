@@ -1,6 +1,6 @@
-import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import Database from 'better-sqlite3';
 
 export type Db = Database.Database;
 
@@ -144,9 +144,17 @@ export function insertSymbol(db: Db, fileId: number, symbol: NewSymbol): void {
   );
 }
 
-export function reviewPosted(db: Db, owner: string, repo: string, prNumber: number, headSha: string): boolean {
+export function reviewPosted(
+  db: Db,
+  owner: string,
+  repo: string,
+  prNumber: number,
+  headSha: string,
+): boolean {
   const row = db
-    .prepare('SELECT 1 FROM reviews WHERE owner = ? AND repo = ? AND pr_number = ? AND head_sha = ?')
+    .prepare(
+      'SELECT 1 FROM reviews WHERE owner = ? AND repo = ? AND pr_number = ? AND head_sha = ?',
+    )
     .get(owner, repo, prNumber, headSha);
   return row !== undefined;
 }

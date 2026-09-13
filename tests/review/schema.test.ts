@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-
 import { parseReviewText } from '../../src/review/schema.js';
 
 const VALID_REVIEW = {
@@ -34,7 +33,11 @@ describe('parseReviewText', () => {
 
   it('defaults evidence to [] when omitted', () => {
     const review = parseReviewText(
-      JSON.stringify({ summary: 'ok', overall: 'approve', findings: [{ severity: 'info', file: 'a.ts', title: 't', body: 'b' }] }),
+      JSON.stringify({
+        summary: 'ok',
+        overall: 'approve',
+        findings: [{ severity: 'info', file: 'a.ts', title: 't', body: 'b' }],
+      }),
     );
     expect(review.findings[0]?.evidence).toEqual([]);
   });
@@ -45,7 +48,11 @@ describe('parseReviewText', () => {
         ...VALID_REVIEW,
         strengths: ['Good error handling'],
         findings: [
-          { ...VALID_REVIEW.findings[0]!, category: 'cross_repo', suggestion: 'Update the client.' },
+          {
+            ...VALID_REVIEW.findings[0]!,
+            category: 'cross_repo',
+            suggestion: 'Update the client.',
+          },
         ],
       }),
     );
@@ -55,7 +62,9 @@ describe('parseReviewText', () => {
   });
 
   it('defaults strengths to [] when omitted', () => {
-    const review = parseReviewText(JSON.stringify({ summary: 'ok', overall: 'approve', findings: [] }));
+    const review = parseReviewText(
+      JSON.stringify({ summary: 'ok', overall: 'approve', findings: [] }),
+    );
     expect(review.strengths).toEqual([]);
   });
 
@@ -91,7 +100,9 @@ describe('parseReviewText', () => {
         JSON.stringify({
           summary: 'x',
           overall: 'approve',
-          findings: [{ severity: 'info', file: 'a.ts', title: 't', body: 'b', category: 'not-a-category' }],
+          findings: [
+            { severity: 'info', file: 'a.ts', title: 't', body: 'b', category: 'not-a-category' },
+          ],
         }),
       ),
     ).toThrow();
@@ -102,7 +113,9 @@ describe('parseReviewText', () => {
   });
 
   it('rejects objects that violate the schema', () => {
-    expect(() => parseReviewText(JSON.stringify({ summary: 'x', overall: 'nope', findings: [] }))).toThrow();
+    expect(() =>
+      parseReviewText(JSON.stringify({ summary: 'x', overall: 'nope', findings: [] })),
+    ).toThrow();
     expect(() => parseReviewText(JSON.stringify({ summary: 'x', overall: 'approve' }))).toThrow();
   });
 
@@ -113,11 +126,22 @@ describe('parseReviewText', () => {
       title: `t${i}`,
       body: 'b',
     }));
-    expect(() => parseReviewText(JSON.stringify({ summary: 'x', overall: 'approve', findings }))).toThrow();
+    expect(() =>
+      parseReviewText(JSON.stringify({ summary: 'x', overall: 'approve', findings })),
+    ).toThrow();
 
     const tooMuchEvidence = {
       ...VALID_REVIEW,
-      findings: [{ ...VALID_REVIEW.findings[0]!, evidence: Array.from({ length: 6 }, (_, i) => ({ repo: 'acme/r', file: 'f.ts', line: i })) }],
+      findings: [
+        {
+          ...VALID_REVIEW.findings[0]!,
+          evidence: Array.from({ length: 6 }, (_, i) => ({
+            repo: 'acme/r',
+            file: 'f.ts',
+            line: i,
+          })),
+        },
+      ],
     };
     expect(() => parseReviewText(JSON.stringify(tooMuchEvidence))).toThrow();
   });

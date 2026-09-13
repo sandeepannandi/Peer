@@ -1,11 +1,10 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Options, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-
-import { loadEnv } from '../../src/config/env.js';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runClaudeReview, type QueryFn } from '../../src/claude/runner.js';
+import { loadEnv } from '../../src/config/env.js';
 
 let workspaceDir: string;
 
@@ -22,7 +21,11 @@ const env = loadEnv({});
 function fakeQuery(calls: { options: (Options | undefined)[] }): QueryFn {
   return async function* (params: { prompt: string; options?: Options }) {
     calls.options.push(params.options);
-    yield { type: 'result', subtype: 'success', result: '{"summary":"ok","overall":"approve","findings":[]}' } as SDKMessage;
+    yield {
+      type: 'result',
+      subtype: 'success',
+      result: '{"summary":"ok","overall":"approve","findings":[]}',
+    } as SDKMessage;
   };
 }
 

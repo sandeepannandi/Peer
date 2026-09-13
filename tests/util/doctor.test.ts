@@ -2,7 +2,6 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
 import { loadEnv } from '../../src/config/env.js';
 import { runDoctor, type RunFn } from '../../src/util/doctor.js';
 
@@ -18,9 +17,15 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-function stubRun(overrides: Partial<Record<string, { ok?: boolean; stdout?: string }>> = {}): RunFn {
+function stubRun(
+  overrides: Partial<Record<string, { ok?: boolean; stdout?: string }>> = {},
+): RunFn {
   return async (command: string, args: string[] = []) => {
-    const key = args.includes('doctor') ? 'doctor' : command.includes('claude') ? 'claude' : command;
+    const key = args.includes('doctor')
+      ? 'doctor'
+      : command.includes('claude')
+        ? 'claude'
+        : command;
     const override = overrides[key];
     if (override) {
       return { ok: override.ok ?? true, stdout: override.stdout };
@@ -33,7 +38,10 @@ describe('runDoctor', () => {
   it('reports green when git, claude and auth are all available', async () => {
     const results = await runDoctor(
       env,
-      stubRun({ claude: { ok: true, stdout: 'claude 2.1.227' }, doctor: { stdout: 'Everything OK' } }),
+      stubRun({
+        claude: { ok: true, stdout: 'claude 2.1.227' },
+        doctor: { stdout: 'Everything OK' },
+      }),
     );
 
     const byName = Object.fromEntries(results.map((r) => [r.name, r.ok]));

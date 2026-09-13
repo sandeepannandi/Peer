@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-
 import { buildReviewPrompt, buildReviewSystemPrompt } from '../../src/claude/prompt.js';
 
 describe('buildReviewSystemPrompt', () => {

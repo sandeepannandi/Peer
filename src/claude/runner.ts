@@ -21,7 +21,10 @@ export interface QueryFn {
 }
 
 // Headless Claude Code session (auth via `claude login`) → the final assistant text.
-export async function runClaudeReview(opts: ClaudeRunOptions, queryFn: QueryFn = query): Promise<string> {
+export async function runClaudeReview(
+  opts: ClaudeRunOptions,
+  queryFn: QueryFn = query,
+): Promise<string> {
   const stream = queryFn({
     prompt: opts.prompt,
     options: {
@@ -41,7 +44,9 @@ export async function runClaudeReview(opts: ClaudeRunOptions, queryFn: QueryFn =
       if (message.subtype === 'success') {
         result = message.result;
       } else {
-        throw new Error(`Claude Code review failed: ${message.errors.join('; ') || message.subtype}`);
+        throw new Error(
+          `Claude Code review failed: ${message.errors.join('; ') || message.subtype}`,
+        );
       }
     }
   }
@@ -52,7 +57,10 @@ export async function runClaudeReview(opts: ClaudeRunOptions, queryFn: QueryFn =
 }
 
 // Run the review, validate the JSON, retry once with a repair prompt on failure.
-export async function runClaudeReviewWithRetry(opts: ClaudeRunOptions, queryFn: QueryFn = query): Promise<Review> {
+export async function runClaudeReviewWithRetry(
+  opts: ClaudeRunOptions,
+  queryFn: QueryFn = query,
+): Promise<Review> {
   const first = await runClaudeReview(opts, queryFn);
   try {
     return parseReviewText(first);

@@ -1,8 +1,15 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
 import { buildContextPack } from '../../src/context/pack.js';
 import type { Probes } from '../../src/context/probes.js';
 import { indexRepos } from '../../src/mirror/indexer.js';
@@ -83,7 +90,10 @@ describe('buildContextPack', () => {
     for (const name of files) {
       expect(existsSync(join(pack.dir, 'context', name))).toBe(true);
     }
-    const userClient = readFileSync(join(pack.dir, 'context', '01__shared__src_user-client.ts'), 'utf8');
+    const userClient = readFileSync(
+      join(pack.dir, 'context', '01__shared__src_user-client.ts'),
+      'utf8',
+    );
     expect(userClient).toContain('# repo: acme/shared\n# file: src/user-client.ts\n');
     expect(userClient).toContain('export class UserClient {}');
     const api = readFileSync(join(pack.dir, 'context', '02__web__src_api.ts'), 'utf8');
@@ -124,7 +134,7 @@ describe('buildContextPack', () => {
         probes: PROBES,
         workspaceRoot,
       }),
-    ).toThrow(/run \"peer mirror/);
+    ).toThrow(/run "peer mirror/);
   });
 
   it('REGRESSION: large pattern files cannot starve relevant source files (CTO packing bug)', () => {
@@ -208,7 +218,6 @@ describe('buildContextPack', () => {
     writeFileSync(join(repoDir('consumers'), 'README.md'), 'p'.repeat(patternBudget - 35)); // 35 = header overhead
 
     // Source file that fits in retrieved budget.
-    const retrievedBudget = Math.floor(1000 * 0.5); // 500
     writeFileSync(join(repoDir('consumers'), 'src', 'core.ts'), 'export function core() {}\n');
 
     indexRepos(db, mirrorRoot, 'acme');
@@ -246,8 +255,14 @@ describe('buildContextPack', () => {
     upsertRepo(db, { owner: 'acme', name: 'repo-b', defaultBranch: 'main' });
     upsertRepo(db, { owner: 'acme', name: 'unrelated', defaultBranch: 'main' });
 
-    writeFileSync(join(repoDir('repo-b'), 'src', 'client.ts'), 'export function fetchUser(id: string) { return getUser(id); }\n');
-    writeFileSync(join(repoDir('unrelated'), 'README.md'), '# unrelated\nThis is a large unrelated file.\n');
+    writeFileSync(
+      join(repoDir('repo-b'), 'src', 'client.ts'),
+      'export function fetchUser(id: string) { return getUser(id); }\n',
+    );
+    writeFileSync(
+      join(repoDir('unrelated'), 'README.md'),
+      '# unrelated\nThis is a large unrelated file.\n',
+    );
 
     indexRepos(db, mirrorRoot, 'acme');
 

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-
 import { buildReviewMarkdown, formatReview } from '../../src/review/format.js';
 import type { Finding, Review } from '../../src/review/schema.js';
 import { parseUnifiedDiff } from '../../src/util/diff.js';
@@ -43,8 +42,21 @@ describe('formatReview', () => {
 
   it('drops findings without a line or with a line outside the hunks into the body', () => {
     const findings: Finding[] = [
-      { severity: 'warning', file: 'src/api.ts', title: 'File-level', body: 'No line.', evidence: [] },
-      { severity: 'info', file: 'src/api.ts', line: 99, title: 'Out of range', body: 'Not in diff.', evidence: [] },
+      {
+        severity: 'warning',
+        file: 'src/api.ts',
+        title: 'File-level',
+        body: 'No line.',
+        evidence: [],
+      },
+      {
+        severity: 'info',
+        file: 'src/api.ts',
+        line: 99,
+        title: 'Out of range',
+        body: 'Not in diff.',
+        evidence: [],
+      },
     ];
 
     const result = formatReview(review('comment', findings), files, 20);
@@ -89,7 +101,12 @@ describe('formatReview', () => {
       suggestion: 'Update web-client to the new shape.',
       evidence: [],
     };
-    const rich = { summary: 'Summary', overall: 'comment' as const, strengths: ['Nice naming'], findings: [droppedFinding] };
+    const rich = {
+      summary: 'Summary',
+      overall: 'comment' as const,
+      strengths: ['Nice naming'],
+      findings: [droppedFinding],
+    };
 
     const body = formatReview(rich, files, 0).body;
 

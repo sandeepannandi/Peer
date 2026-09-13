@@ -52,7 +52,10 @@ export function createWebhookHandler(env: Env, onReview: WebhookHandler) {
 
       const header = req.headers['x-hub-signature-256'];
       const signature = Array.isArray(header) ? header[0] : header;
-      if (!env.GITHUB_WEBHOOK_SECRET || !verifySignature(env.GITHUB_WEBHOOK_SECRET, rawBody, signature)) {
+      if (
+        !env.GITHUB_WEBHOOK_SECRET ||
+        !verifySignature(env.GITHUB_WEBHOOK_SECRET, rawBody, signature)
+      ) {
         res.writeHead(401).end('invalid signature');
         return;
       }
@@ -70,7 +73,9 @@ export function createWebhookHandler(env: Env, onReview: WebhookHandler) {
       }
 
       res.writeHead(202).end('accepted');
-      Promise.resolve(onReview(event)).catch((err) => logger.error({ err, event }, 'webhook review failed'));
+      Promise.resolve(onReview(event)).catch((err) =>
+        logger.error({ err, event }, 'webhook review failed'),
+      );
     } catch (err) {
       logger.error({ err }, 'webhook request failed');
       if (!res.headersSent) {
@@ -92,6 +97,9 @@ export function startWebhookServer(env: Env, onReview: WebhookHandler): void {
     process.exit(1);
   });
   server.listen(env.WEBHOOK_PORT, () => {
-    logger.info({ port: env.WEBHOOK_PORT }, 'webhook listening — configure the GitHub App webhook URL to this endpoint');
+    logger.info(
+      { port: env.WEBHOOK_PORT },
+      'webhook listening — configure the GitHub App webhook URL to this endpoint',
+    );
   });
 }

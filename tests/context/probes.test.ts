@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-
 import { extractProbes } from '../../src/context/probes.js';
 import { parseUnifiedDiff } from '../../src/util/diff.js';
 

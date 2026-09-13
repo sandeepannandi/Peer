@@ -2,7 +2,6 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import type { InstallationOctokit } from '../../src/github/auth.js';
 import { postReview } from '../../src/review/post.js';
 import { openDb, reviewPosted, type Db } from '../../src/store/db.js';

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-
 import { loadEnv } from '../src/config/env.js';
 
 describe('loadEnv', () => {

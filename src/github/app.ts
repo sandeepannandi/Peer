@@ -21,7 +21,9 @@ export function createApp(env: Env): App {
   } else if (GITHUB_PRIVATE_KEY) {
     privateKey = Buffer.from(GITHUB_PRIVATE_KEY, 'base64').toString('utf8');
   } else {
-    throw new Error('No GitHub App private key — set GITHUB_PRIVATE_KEY_PATH (or GITHUB_PRIVATE_KEY).');
+    throw new Error(
+      'No GitHub App private key — set GITHUB_PRIVATE_KEY_PATH (or GITHUB_PRIVATE_KEY).',
+    );
   }
 
   if (!privateKey.includes('-----BEGIN')) {

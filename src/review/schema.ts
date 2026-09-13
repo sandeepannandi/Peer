@@ -40,10 +40,14 @@ export type Finding = z.infer<typeof FindingSchema>;
 export type FindingCategory = z.infer<typeof FindingCategory>;
 
 // Strip emoji ranges so none ever reach the output.
-const EMOJI_RE = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\u{200D}\u{FE0F}]/gu;
+const EMOJI_RE =
+  /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\u{200D}\u{FE0F}]/gu;
 
 function stripEmojis(value: string): string {
-  return value.replace(EMOJI_RE, '').replace(/\s{2,}/g, ' ').trim();
+  return value
+    .replace(EMOJI_RE, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
 /** Recursively remove emoji from every string in the parsed review data. */

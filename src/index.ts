@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 import 'dotenv/config';
 
-import { Command, InvalidArgumentError } from 'commander';
 import { join } from 'node:path';
-
+import { Command, InvalidArgumentError } from 'commander';
 import { loadEnv, type Env } from './config/env.js';
 import { createApp } from './github/app.js';
 import { createInstallationOctokit } from './github/auth.js';
@@ -61,7 +60,10 @@ program
   .requiredOption('--repo <repo>', 'Repository name')
   .requiredOption('--pr <number>', 'Pull request number', parsePositiveInt)
   .option('--post', 'Post the review to GitHub as a PR review (default: save locally)')
-  .option('--local', 'Run retrieval and context packing against bundled fixtures, then deterministic stub review (no GitHub, no Claude)')
+  .option(
+    '--local',
+    'Run retrieval and context packing against bundled fixtures, then deterministic stub review (no GitHub, no Claude)',
+  )
   .option('--fixtures <dir>', 'Fixtures directory for --local mode', 'tests/fixtures')
   .action(async (opts: ReviewOptions) => {
     const env = loadEnv();
@@ -71,10 +73,22 @@ program
         throw new Error('--post cannot be used with --local (fixture mode has no GitHub).');
       }
       const db = openDb(dbPath(env));
-      stageLocalRepos({ fixturesRoot: opts.fixtures!, mirrorRoot: mirrorRoot(env), owner: opts.owner, db });
+      stageLocalRepos({
+        fixturesRoot: opts.fixtures!,
+        mirrorRoot: mirrorRoot(env),
+        owner: opts.owner,
+        db,
+      });
       indexRepos(db, mirrorRoot(env), opts.owner);
       const pr = loadLocalPr(opts.fixtures!, opts.repo, opts.pr);
-      const { fileDiffs, pack } = buildPack(env, db, opts.owner, opts.repo, pr.diff, join(env.DATA_DIR, 'workspace'));
+      const { fileDiffs, pack } = buildPack(
+        env,
+        db,
+        opts.owner,
+        opts.repo,
+        pr.diff,
+        join(env.DATA_DIR, 'workspace'),
+      );
       logger.info({ dir: pack.dir, contextFiles: pack.contextFiles }, 'local context pack built');
       const review = runLocalReviewer(pack.dir, fileDiffs, `${opts.owner}/${opts.repo}#${opts.pr}`);
       saveLocalReview(pack.dir, review, fileDiffs, env.MAX_REVIEW_COMMENTS);
@@ -82,7 +96,11 @@ program
       return;
     }
 
-    await reviewPullRequest(env, { owner: opts.owner, repo: opts.repo, prNumber: opts.pr }, opts.post ?? false);
+    await reviewPullRequest(
+      env,
+      { owner: opts.owner, repo: opts.repo, prNumber: opts.pr },
+      opts.post ?? false,
+    );
   });
 
 program
@@ -96,7 +114,11 @@ program
     }
     const port = opts.port ?? env.WEBHOOK_PORT;
     startWebhookServer({ ...env, WEBHOOK_PORT: port }, (event) =>
-      reviewPullRequest(env, { owner: event.owner, repo: event.repo, prNumber: event.prNumber }, true),
+      reviewPullRequest(
+        env,
+        { owner: event.owner, repo: event.repo, prNumber: event.prNumber },
+        true,
+      ),
     );
   });
 
@@ -117,7 +139,10 @@ program
       db,
     });
     db.close();
-    logger.info({ owner: opts.owner, mirrored: mirrored.length, skipped, failed }, 'mirror complete');
+    logger.info(
+      { owner: opts.owner, mirrored: mirrored.length, skipped, failed },
+      'mirror complete',
+    );
   });
 
 program
@@ -134,7 +159,9 @@ program
 
 program
   .command('context')
-  .description('Fetch a PR and build its cross-repo context pack (inspect what the reviewer will see)')
+  .description(
+    'Fetch a PR and build its cross-repo context pack (inspect what the reviewer will see)',
+  )
   .requiredOption('--owner <owner>', 'GitHub organisation / owner')
   .requiredOption('--repo <repo>', 'Repository name')
   .requiredOption('--pr <number>', 'Pull request number', parsePositiveInt)
@@ -144,7 +171,14 @@ program
     const { octokit } = await createInstallationOctokit(app, opts.owner);
     const pr = await fetchPr(octokit, opts.owner, opts.repo, opts.pr);
     const db = openDb(dbPath(env));
-    const { pack } = buildPack(env, db, opts.owner, opts.repo, pr.diff, join(env.DATA_DIR, 'workspace'));
+    const { pack } = buildPack(
+      env,
+      db,
+      opts.owner,
+      opts.repo,
+      pr.diff,
+      join(env.DATA_DIR, 'workspace'),
+    );
     db.close();
     logger.info(
       {
@@ -167,7 +201,10 @@ program
     const results = await runDoctor(env);
     let failed = false;
     for (const result of results) {
-      logger.info({ check: result.name, ok: result.ok, detail: result.detail }, result.ok ? 'check passed' : 'check FAILED');
+      logger.info(
+        { check: result.name, ok: result.ok, detail: result.detail },
+        result.ok ? 'check passed' : 'check FAILED',
+      );
       if (!result.ok) failed = true;
     }
     if (failed) process.exit(1);

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-
 import { buildNumberedDiff, parseUnifiedDiff } from '../../src/util/diff.js';
 
 describe('parseUnifiedDiff', () => {

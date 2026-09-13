@@ -2,9 +2,8 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
-import { extractProbes } from '../../src/context/probes.js';
 import { buildContextPack } from '../../src/context/pack.js';
+import { extractProbes } from '../../src/context/probes.js';
 import { loadLocalPr, stageLocalRepos } from '../../src/local/fixture.js';
 import { runLocalReviewer } from '../../src/local/reviewer.js';
 import { indexRepos } from '../../src/mirror/indexer.js';
@@ -32,7 +31,12 @@ describe('local multi-repo pipeline (no GitHub, no Claude)', () => {
   it('stages fixtures, builds a cross-repo context pack, and produces a review citing the other repo', () => {
     const mirror = join(root, 'mirror');
 
-    const staged = stageLocalRepos({ fixturesRoot: FIXTURES, mirrorRoot: mirror, owner: OWNER, db });
+    const staged = stageLocalRepos({
+      fixturesRoot: FIXTURES,
+      mirrorRoot: mirror,
+      owner: OWNER,
+      db,
+    });
     expect(staged.sort()).toEqual(['repo-a', 'repo-b']);
 
     const indexed = indexRepos(db, mirror, OWNER);

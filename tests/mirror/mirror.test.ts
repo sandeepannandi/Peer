@@ -2,7 +2,6 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
 import type { InstallationOctokit } from '../../src/github/auth.js';
 import { mirrorOrgRepos, mirrorRepo } from '../../src/mirror/mirror.js';
 import { listReposByOwner, openDb, type Db } from '../../src/store/db.js';

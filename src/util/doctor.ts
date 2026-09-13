@@ -1,9 +1,9 @@
-import { execa } from 'execa';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { execa } from 'execa';
+import type { Env } from '../config/env.js';
 import { createApp } from '../github/app.js';
 import { openDb } from '../store/db.js';
-import type { Env } from '../config/env.js';
 
 export interface DoctorResult {
   name: string;
@@ -26,7 +26,10 @@ export function findClaudeBinary(): string {
   return existsSync(bundled) ? bundled : 'claude';
 }
 
-async function defaultRun(command: string, args: string[] = []): Promise<{ ok: boolean; stdout?: string; stderr?: string }> {
+async function defaultRun(
+  command: string,
+  args: string[] = [],
+): Promise<{ ok: boolean; stdout?: string; stderr?: string }> {
   try {
     const { stdout, stderr } = await execa(command, args);
     return { ok: true, stdout, stderr };
@@ -47,7 +50,9 @@ export async function runDoctor(env: Env, run: RunFn = defaultRun): Promise<Doct
   results.push({
     name: 'claude',
     ok: claudeVersion.ok,
-    detail: claudeVersion.ok ? `claude ${claudeVersion.stdout?.trim()}` : 'Claude Code CLI not reachable — run npm install -g @anthropic-ai/claude-code',
+    detail: claudeVersion.ok
+      ? `claude ${claudeVersion.stdout?.trim()}`
+      : 'Claude Code CLI not reachable — run npm install -g @anthropic-ai/claude-code',
   });
 
   const doctor = await run(claude, ['doctor']);

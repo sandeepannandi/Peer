@@ -1,11 +1,14 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Options, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  runClaudeReview,
+  runClaudeReviewWithRetry,
+  type QueryFn,
+} from '../../src/claude/runner.js';
 import { loadEnv } from '../../src/config/env.js';
-import { runClaudeReview, runClaudeReviewWithRetry, type QueryFn } from '../../src/claude/runner.js';
 
 let workspaceDir: string;
 
@@ -25,7 +28,10 @@ const VALID_REVIEW = {
   findings: [],
 };
 
-function fakeQuery(results: string[], calls: { prompts: string[]; options: (Options | undefined)[] }): QueryFn {
+function fakeQuery(
+  results: string[],
+  calls: { prompts: string[]; options: (Options | undefined)[] },
+): QueryFn {
   return async function* (params: { prompt: string; options?: Options }) {
     calls.prompts.push(params.prompt);
     calls.options.push(params.options);
@@ -72,7 +78,9 @@ describe('runClaudeReview', () => {
     const queryFn: QueryFn = async function* () {
       yield { type: 'result', subtype: 'error_during_execution', errors: ['boom'] } as SDKMessage;
     };
-    await expect(runClaudeReview(opts(), queryFn)).rejects.toThrow(/Claude Code review failed: boom/);
+    await expect(runClaudeReview(opts(), queryFn)).rejects.toThrow(
+      /Claude Code review failed: boom/,
+    );
   });
 });
 

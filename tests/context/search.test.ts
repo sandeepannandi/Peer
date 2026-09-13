@@ -2,7 +2,6 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
 import type { Probes } from '../../src/context/probes.js';
 import { findContextFiles } from '../../src/context/search.js';
 import { indexRepos } from '../../src/mirror/indexer.js';
@@ -92,14 +91,21 @@ describe('findContextFiles', () => {
   it('returns an empty list when nothing matches', () => {
     indexFixture();
 
-    const results = findContextFiles(db, mirrorRoot, 'acme', 'api', {
-      paths: [],
-      basenames: ['nope.ts'],
-      symbols: ['DoesNotExist'],
-      imports: [],
-      routes: [],
-      tables: [],
-    }, 10);
+    const results = findContextFiles(
+      db,
+      mirrorRoot,
+      'acme',
+      'api',
+      {
+        paths: [],
+        basenames: ['nope.ts'],
+        symbols: ['DoesNotExist'],
+        imports: [],
+        routes: [],
+        tables: [],
+      },
+      10,
+    );
 
     expect(results).toEqual([]);
   });

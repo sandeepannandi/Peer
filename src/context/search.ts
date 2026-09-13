@@ -66,7 +66,11 @@ export function findContextFiles(
          WHERE r.owner = ? AND r.name <> ? AND f.basename IN (${placeholders})
          GROUP BY f.id`,
       )
-      .all(owner, prRepo, ...probes.basenames) as Array<{ repo: string; file: string; hits: number }>;
+      .all(owner, prRepo, ...probes.basenames) as Array<{
+      repo: string;
+      file: string;
+      hits: number;
+    }>;
     for (const row of rows) {
       bump(`${owner}/${row.repo}`, row.file, WEIGHTS.basename * row.hits, 'basename');
     }
@@ -84,7 +88,8 @@ export function findContextFiles(
       for (const abs of walkFiles(repoDir)) {
         if (scanned++ >= MAX_FILES_PER_REPO_SCAN) break;
         const content = readFileUtf8(abs);
-        if (content === null || Buffer.byteLength(content, 'utf8') > MAX_CONTENT_SCAN_BYTES) continue;
+        if (content === null || Buffer.byteLength(content, 'utf8') > MAX_CONTENT_SCAN_BYTES)
+          continue;
 
         const lower = content.toLowerCase();
         let hits = 0;

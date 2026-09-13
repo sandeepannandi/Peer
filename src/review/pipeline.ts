@@ -1,6 +1,5 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-
 import { buildReviewPrompt, buildReviewSystemPrompt } from '../claude/prompt.js';
 import { runClaudeReviewWithRetry } from '../claude/runner.js';
 import type { Env } from '../config/env.js';
@@ -33,7 +32,14 @@ export interface ReviewOutcome {
   posted: boolean | null;
 }
 
-export function buildPack(env: Env, db: Db, owner: string, repo: string, diff: string, workspaceRoot: string): { fileDiffs: FileDiff[]; pack: PackResult } {
+export function buildPack(
+  env: Env,
+  db: Db,
+  owner: string,
+  repo: string,
+  diff: string,
+  workspaceRoot: string,
+): { fileDiffs: FileDiff[]; pack: PackResult } {
   const fileDiffs = parseUnifiedDiff(diff);
   const probes = extractProbes(fileDiffs);
   const pack = buildContextPack({
@@ -50,15 +56,27 @@ export function buildPack(env: Env, db: Db, owner: string, repo: string, diff: s
   return { fileDiffs, pack };
 }
 
-export function saveLocalReview(dir: string, review: Review, fileDiffs: FileDiff[], maxComments: number): void {
+export function saveLocalReview(
+  dir: string,
+  review: Review,
+  fileDiffs: FileDiff[],
+  maxComments: number,
+): void {
   writeFileSync(join(dir, 'review.json'), JSON.stringify(review, null, 2));
   writeFileSync(join(dir, 'review.md'), buildReviewMarkdown(review, fileDiffs, maxComments));
   console.log(JSON.stringify(review, null, 2));
-  logger.info({ dir, findings: review.findings.length, overall: review.overall }, 'review saved locally');
+  logger.info(
+    { dir, findings: review.findings.length, overall: review.overall },
+    'review saved locally',
+  );
 }
 
 /** Full review flow: fetch PR → mirror+index → context pack → Claude → post or save. */
-export async function reviewPullRequest(env: Env, req: ReviewRequest, post: boolean): Promise<ReviewOutcome> {
+export async function reviewPullRequest(
+  env: Env,
+  req: ReviewRequest,
+  post: boolean,
+): Promise<ReviewOutcome> {
   const { owner, repo, prNumber } = req;
   const db = openDb(join(env.DATA_DIR, 'index.db'));
   const workspaceRoot = join(env.DATA_DIR, 'workspace');
@@ -99,7 +117,12 @@ export async function reviewPullRequest(env: Env, req: ReviewRequest, post: bool
     });
     writeFileSync(join(pack.dir, 'prompt.txt'), prompt);
 
-    const review = await runClaudeReviewWithRetry({ env, workspaceDir: pack.dir, systemPrompt, prompt });
+    const review = await runClaudeReviewWithRetry({
+      env,
+      workspaceDir: pack.dir,
+      systemPrompt,
+      prompt,
+    });
 
     if (post) {
       const formatted = formatReview(review, fileDiffs, env.MAX_REVIEW_COMMENTS);
@@ -120,7 +143,9 @@ export async function reviewPullRequest(env: Env, req: ReviewRequest, post: bool
           inlineComments: formatted.comments.length,
           droppedToBody: formatted.dropped.length,
         },
-        result.posted ? 'review posted to GitHub' : 'review already posted for this head commit — skipped',
+        result.posted
+          ? 'review posted to GitHub'
+          : 'review already posted for this head commit — skipped',
       );
       return { review, dir: pack.dir, posted: result.posted };
     }

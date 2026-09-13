@@ -1,8 +1,7 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-
 import { buildContextPack } from '../../src/context/pack.js';
 import type { Probes } from '../../src/context/probes.js';
 import { indexRepos } from '../../src/mirror/indexer.js';
@@ -45,8 +44,18 @@ function genSource(dir: string, relPath: string, symbol: string, bodyLen: number
 
 describe('production-realism: context packing under realistic conditions', () => {
   it('large README + AGENTS from multiple repos cannot starve 10 relevant source files', () => {
-    const repos = ['svc-auth', 'svc-pay', 'svc-user', 'svc-notif', 'svc-gateway',
-                   'svc-config', 'svc-logging', 'svc-metrics', 'svc-cache', 'svc-queue'];
+    const repos = [
+      'svc-auth',
+      'svc-pay',
+      'svc-user',
+      'svc-notif',
+      'svc-gateway',
+      'svc-config',
+      'svc-logging',
+      'svc-metrics',
+      'svc-cache',
+      'svc-queue',
+    ];
     const prRepo = 'svc-api';
 
     upsertRepo(db, { owner: 'acme', name: prRepo, defaultBranch: 'main' });
@@ -65,14 +74,24 @@ describe('production-realism: context packing under realistic conditions', () =>
 
     const symbols = repos.map((_, i) => `core_${i}`);
     const probes: Probes = {
-      paths: ['src/api.ts'], basenames: ['api.ts'],
-      symbols, imports: [], routes: [], tables: [],
+      paths: ['src/api.ts'],
+      basenames: ['api.ts'],
+      symbols,
+      imports: [],
+      routes: [],
+      tables: [],
     };
 
     const budget = 40_000;
     const pack = buildContextPack({
-      db, mirrorRoot, owner: 'acme', prRepo,
-      numberedDiff: '== diff ==', probes, budgetChars: budget, workspaceRoot,
+      db,
+      mirrorRoot,
+      owner: 'acme',
+      prRepo,
+      numberedDiff: '== diff ==',
+      probes,
+      budgetChars: budget,
+      workspaceRoot,
     });
 
     const files = contextFiles(pack.dir);
@@ -106,16 +125,26 @@ describe('production-realism: context packing under realistic conditions', () =>
     indexRepos(db, mirrorRoot, 'acme');
 
     const probes: Probes = {
-      paths: ['src/api.ts'], basenames: ['api.ts'],
-      symbols: ['handleRequest'], imports: [], routes: [], tables: [],
+      paths: ['src/api.ts'],
+      basenames: ['api.ts'],
+      symbols: ['handleRequest'],
+      imports: [],
+      routes: [],
+      tables: [],
     };
 
     // Budget = 1000. retrievedBudget = 500, patternBudget = 300.
     // Source files: header(46) + content(~106) ≈ 152 each. Two fit in 500.
     // Pattern files: 30000+ each, neither fits in 300.
     const pack = buildContextPack({
-      db, mirrorRoot, owner: 'acme', prRepo: 'pr-repo',
-      numberedDiff: '', probes, budgetChars: 1000, workspaceRoot,
+      db,
+      mirrorRoot,
+      owner: 'acme',
+      prRepo: 'pr-repo',
+      numberedDiff: '',
+      probes,
+      budgetChars: 1000,
+      workspaceRoot,
     });
 
     const files = contextFiles(pack.dir);
@@ -134,25 +163,41 @@ describe('production-realism: context packing under realistic conditions', () =>
     upsertRepo(db, { owner: 'acme', name: 'pr-repo', defaultBranch: 'main' });
 
     // high-score: symbol + content + basename match
-    writeFileSync(join(repoDir('high-score'), 'src', 'api.ts'),
-      'export function processPayment() { return fetch("/api/payments"); }\n');
+    writeFileSync(
+      join(repoDir('high-score'), 'src', 'api.ts'),
+      'export function processPayment() { return fetch("/api/payments"); }\n',
+    );
     // mid-score: symbol match only
-    writeFileSync(join(repoDir('mid-score'), 'src', 'api.ts'),
-      'export function processPayment() { return "mid"; }\n');
+    writeFileSync(
+      join(repoDir('mid-score'), 'src', 'api.ts'),
+      'export function processPayment() { return "mid"; }\n',
+    );
     // low-score: content match only
-    writeFileSync(join(repoDir('low-score'), 'src', 'utils.ts'),
-      '// handles /api/payments routing\n');
+    writeFileSync(
+      join(repoDir('low-score'), 'src', 'utils.ts'),
+      '// handles /api/payments routing\n',
+    );
 
     indexRepos(db, mirrorRoot, 'acme');
 
     const probes: Probes = {
-      paths: ['src/api.ts'], basenames: ['api.ts'],
-      symbols: ['processPayment'], imports: [], routes: ['/api/payments'], tables: [],
+      paths: ['src/api.ts'],
+      basenames: ['api.ts'],
+      symbols: ['processPayment'],
+      imports: [],
+      routes: ['/api/payments'],
+      tables: [],
     };
 
     const pack = buildContextPack({
-      db, mirrorRoot, owner: 'acme', prRepo: 'pr-repo',
-      numberedDiff: '', probes, budgetChars: 5000, workspaceRoot,
+      db,
+      mirrorRoot,
+      owner: 'acme',
+      prRepo: 'pr-repo',
+      numberedDiff: '',
+      probes,
+      budgetChars: 5000,
+      workspaceRoot,
     });
 
     const files = contextFiles(pack.dir);
@@ -175,13 +220,23 @@ describe('production-realism: context packing under realistic conditions', () =>
     indexRepos(db, mirrorRoot, 'acme');
 
     const probes: Probes = {
-      paths: ['src/huge.ts'], basenames: ['huge.ts'],
-      symbols: ['x'], imports: [], routes: [], tables: [],
+      paths: ['src/huge.ts'],
+      basenames: ['huge.ts'],
+      symbols: ['x'],
+      imports: [],
+      routes: [],
+      tables: [],
     };
 
     const pack = buildContextPack({
-      db, mirrorRoot, owner: 'acme', prRepo: 'pr-repo',
-      numberedDiff: '', probes, budgetChars: 40_000, workspaceRoot,
+      db,
+      mirrorRoot,
+      owner: 'acme',
+      prRepo: 'pr-repo',
+      numberedDiff: '',
+      probes,
+      budgetChars: 40_000,
+      workspaceRoot,
     });
 
     // File is ~30038 bytes > retrievedBudget (20000), so skipped.
@@ -195,19 +250,35 @@ describe('production-realism: context packing under realistic conditions', () =>
     upsertRepo(db, { owner: 'acme', name: 'repo-b', defaultBranch: 'main' });
     upsertRepo(db, { owner: 'acme', name: 'repo-c', defaultBranch: 'main' });
 
-    writeFileSync(join(repoDir('repo-b'), 'src', 'auth.ts'), 'export function validateToken() {}\n');
-    writeFileSync(join(repoDir('repo-c'), 'src', 'auth.ts'), 'export function validateToken() {}\n');
+    writeFileSync(
+      join(repoDir('repo-b'), 'src', 'auth.ts'),
+      'export function validateToken() {}\n',
+    );
+    writeFileSync(
+      join(repoDir('repo-c'), 'src', 'auth.ts'),
+      'export function validateToken() {}\n',
+    );
 
     indexRepos(db, mirrorRoot, 'acme');
 
     const probes: Probes = {
-      paths: ['src/auth.ts'], basenames: ['auth.ts'],
-      symbols: ['validateToken'], imports: [], routes: [], tables: [],
+      paths: ['src/auth.ts'],
+      basenames: ['auth.ts'],
+      symbols: ['validateToken'],
+      imports: [],
+      routes: [],
+      tables: [],
     };
 
     const pack = buildContextPack({
-      db, mirrorRoot, owner: 'acme', prRepo: 'repo-a',
-      numberedDiff: '', probes, budgetChars: 40_000, workspaceRoot,
+      db,
+      mirrorRoot,
+      owner: 'acme',
+      prRepo: 'repo-a',
+      numberedDiff: '',
+      probes,
+      budgetChars: 40_000,
+      workspaceRoot,
     });
 
     const files = contextFiles(pack.dir);
