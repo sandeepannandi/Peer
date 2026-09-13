@@ -1,8 +1,13 @@
 # Peer
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js >=20](https://img.shields.io/badge/Node.js-%3E%3D20-brightgreen)](https://nodejs.org/)
+
 A cross-repo code-review bot for GitHub organisations. Peer reviews a pull request against relevant context from the **other repositories in the org** — catching API-contract breaks, duplicated logic, and org-pattern violations that a single-repo review would miss — then posts the result as a GitHub PR review with inline comments.
 
 The review reasoning runs through **Claude Code** (subscription auth via `claude login`) — never a direct Anthropic API call.
+
+---
 
 ## Highlights
 
@@ -12,13 +17,17 @@ The review reasoning runs through **Claude Code** (subscription auth via `claude
 - **Zero-credential proof** — `--local` fixture mode runs the retrieval and context-packing pipeline against bundled fixtures, then uses a deterministic stub reviewer (no GitHub access or API key needed)
 - **Tested** — 95 tests across 22 suites; engine calls are dependency-injected, so tests never hit the network
 
+---
+
 ## How it works
 
 1. **Mirror** — shallow-clones the org's repositories and indexes their files and symbols into SQLite.
 2. **Probe** — parses the PR diff into a numbered diff and extracts probe terms: symbols, imports, routes, tables.
-3. **Context pack** — finds matching files in the _other_ repos, ranks them, and stages the top files next to the numbered diff (capped by count and token budget), plus org pattern files (`AGENTS.md`, `README.md`).
+3. **Context pack** — finds matching files in the *other* repos, ranks them, and stages the top files next to the numbered diff (capped by count and token budget), plus org pattern files (`AGENTS.md`, `README.md`).
 4. **Review** — Claude Code reviews the diff against the pack and returns a single JSON review: summary, verdict, strengths, and findings with severity, category, file, line, suggestion, and cross-repo evidence.
 5. **Post** — the JSON is schema-validated, findings are anchored to real new-file lines, and the review is posted as inline comments (or saved locally without `--post`).
+
+---
 
 ## Requirements
 
@@ -26,49 +35,52 @@ The review reasoning runs through **Claude Code** (subscription auth via `claude
 - `git`
 - Claude Code CLI, installed and logged in with your subscription (`claude login`)
 
+---
+
 ## Setup
 
 ```sh
 npm install
 cp .env.example .env     # then fill in your credentials
-npm run typecheck
-npm run lint
-npm run format:check
-npm test
+npm run ci
 ```
-
-Run the combined quality gate with `npm run ci`.
 
 Verify the environment with `peer doctor` (git, Claude Code, GitHub App credentials, SQLite).
 
+---
+
 ## Usage
 
-| Command                                                  | Description                                                                                        |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `peer doctor`                                            | Environment health check                                                                           |
-| `peer mirror --owner <org>`                              | Clone/refresh the org's repositories                                                               |
-| `peer index --owner <org>`                               | Build the SQLite symbol index                                                                      |
-| `peer context --owner <org> --repo <r> --pr <n>`         | Build and inspect a PR's context pack                                                              |
-| `peer review --owner <org> --repo <r> --pr <n> [--post]` | Review a PR — save locally, or post to GitHub with `--post`                                        |
-| `peer review --owner <org> --repo <r> --pr <n> --local`  | Retrieval + context pack against bundled fixtures, then deterministic stub review (no credentials) |
-| `peer webhook [--port <n>]`                              | Bot mode: auto-review PRs on `opened`/`synchronize`                                                |
+| Command | Description |
+|---|---|
+| `peer doctor` | Environment health check |
+| `peer mirror --owner <org>` | Clone/refresh the org repositories |
+| `peer index --owner <org>` | Build the SQLite symbol index |
+| `peer context --owner <org> --repo <r> --pr <n>` | Build and inspect a PR's context pack |
+| `peer review --owner <org> --repo <r> --pr <n> [--post]` | Review a PR — save locally, or post to GitHub with `--post` |
+| `peer review --owner <org> --repo <r> --pr <n> --local` | Retrieval + context pack against bundled fixtures, then deterministic stub review (no credentials) |
+| `peer webhook [--port <n>]` | Bot mode: auto-review PRs on `opened`/`synchronize` |
 
 ```sh
 npm run dev -- review --owner acme --repo repo-a --pr 1 --local
 ./scripts/demo.sh <org> <repo> <pr> --post
 ```
 
+---
+
 ## Configuration
 
-| Variable                                                          | Purpose                                                 |
-| ----------------------------------------------------------------- | ------------------------------------------------------- |
-| `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY_PATH` / `GITHUB_PRIVATE_KEY` | GitHub App credentials (one key source only)            |
-| `GITHUB_ORG`                                                      | Org whose repos are mirrored (defaults to the PR owner) |
-| `GITHUB_WEBHOOK_SECRET`, `WEBHOOK_PORT`                           | Webhook bot mode                                        |
-| `CLAUDE_MODEL`, `CLAUDE_MAX_TURNS`                                | Review engine (default `sonnet`, max 30 turns)          |
-| `REVIEW_MAX_CONTEXT_FILES`, `CONTEXT_TOKEN_BUDGET`                | Context-pack sizing (defaults 12 files / 40k chars)     |
-| `MAX_REVIEW_COMMENTS`                                             | Inline-comment cap (default 20)                         |
-| `DATA_DIR`, `LOG_LEVEL`                                           | Paths and logging                                       |
+| Variable | Purpose |
+|---|---|
+| `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY_PATH` / `GITHUB_PRIVATE_KEY` | GitHub App credentials (one key source only) |
+| `GITHUB_ORG` | Org whose repositories are mirrored (defaults to the PR owner) |
+| `GITHUB_WEBHOOK_SECRET`, `WEBHOOK_PORT` | Webhook bot mode |
+| `CLAUDE_MODEL`, `CLAUDE_MAX_TURNS` | Review engine (default `sonnet`, max 30 turns) |
+| `REVIEW_MAX_CONTEXT_FILES`, `CONTEXT_TOKEN_BUDGET` | Context-pack sizing (defaults 12 files / 40k chars) |
+| `MAX_REVIEW_COMMENTS` | Inline-comment cap (default 20) |
+| `DATA_DIR`, `LOG_LEVEL` | Paths and logging |
+
+---
 
 ## Project structure
 
@@ -88,6 +100,8 @@ src/
 tests/                22 vitest suites, 95 tests, bundled fixture repos
 ```
 
+---
+
 ## Security
 
 - GitHub App **installation tokens** are minted per run, injected only into the git clone URL, stripped from the stored remote, and scrubbed from error output — never persisted.
@@ -95,11 +109,15 @@ tests/                22 vitest suites, 95 tests, bundled fixture repos
 - Startup **fails fast if `ANTHROPIC_API_KEY` is set** — reviews never use a direct Anthropic API call.
 - Webhook requests are verified with `X-Hub-Signature-256` before processing.
 
+---
+
 ## Limitations
 
 - Context retrieval is lexical (symbol/basename/content matching), not semantic.
 - Findings must map to new-file lines inside diff hunks; unanchored findings are rendered in the review body instead.
 - Each review is a single model call (~1–3 min); no batching or queueing yet.
+
+---
 
 ## License
 
