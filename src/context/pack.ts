@@ -67,7 +67,6 @@ export function buildContextPack(options: PackOptions): PackResult {
   let contextFiles = 0;
   let skippedForBudget = 0;
   let index = 0;
-  const contextDir_ = contextDir; // alias for nested use
 
   // ── Phase 1: pack retrieved / source candidates into the retrieved budget ──
   const seen = new Set<string>();
@@ -93,17 +92,20 @@ export function buildContextPack(options: PackOptions): PackResult {
       continue;
     }
 
+    if (content === null) {
+      skippedForBudget += 1;
+      continue;
+    }
     const header = `# repo: ${candidate.repo}\n# file: ${candidate.file}\n`;
-    const body = content ?? '';
-    const totalLen = header.length + body.length;
+    const totalLen = header.length + content.length;
     if (retrievedRemaining - totalLen < 0) {
       skippedForBudget += 1;
       continue;
     }
     retrievedRemaining -= totalLen;
     index += 1;
-    const name = contextFileName(index, candidate.repo, candidate.file, contextDir_);
-    writeFileSync(join(contextDir_, name), header + body);
+    const name = contextFileName(index, candidate.repo, candidate.file, contextDir);
+    writeFileSync(join(contextDir, name), header + content);
     contextFiles += 1;
   }
 
@@ -142,17 +144,20 @@ export function buildContextPack(options: PackOptions): PackResult {
       continue;
     }
 
+    if (content === null) {
+      skippedForBudget += 1;
+      continue;
+    }
     const header = `# repo: ${candidate.repo}\n# file: ${candidate.file}\n`;
-    const body = content ?? '';
-    const totalLen = header.length + body.length;
+    const totalLen = header.length + content.length;
     if (patternRemaining - totalLen < 0) {
       skippedForBudget += 1;
       continue;
     }
     patternRemaining -= totalLen;
     index += 1;
-    const name = contextFileName(index, candidate.repo, candidate.file, contextDir_);
-    writeFileSync(join(contextDir_, name), header + body);
+    const name = contextFileName(index, candidate.repo, candidate.file, contextDir);
+    writeFileSync(join(contextDir, name), header + content);
     contextFiles += 1;
   }
 
