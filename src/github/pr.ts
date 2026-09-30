@@ -26,6 +26,7 @@ export async function fetchPr(
 ): Promise<PullRequest> {
   const endpoint = { owner, repo, pull_number: prNumber };
 
+  const before = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', endpoint);
   const [pr, diffRes, files, commits] = await Promise.all([
     octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', endpoint),
     // With the .diff accept header the body is raw unified diff text, not JSON.
@@ -46,6 +47,17 @@ export async function fetchPr(
   const head = commits[commits.length - 1];
   if (!head) {
     throw new Error(`Pull request #${prNumber} has no commits.`);
+  }
+
+  const after = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', endpoint);
+  if (
+    !before.data.head?.sha ||
+    before.data.head.sha !== pr.data.head?.sha ||
+    before.data.head.sha !== after.data.head?.sha ||
+    before.data.head.sha !== head.sha ||
+    before.data.base.sha !== after.data.base.sha
+  ) {
+    throw new Error('PR snapshot changed while fetching; retry with stable revisions.');
   }
 
   return {
