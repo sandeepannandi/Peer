@@ -169,6 +169,12 @@ export function buildContextPack(options: PackOptions): PackResult {
   }
   if (skippedForBudget)
     manifest.coverage.limitations.push(`${skippedForBudget} inputs omitted by character budget`);
+  const limitations = [...new Set(manifest.coverage.limitations)];
+  manifest.coverage.limitations = limitations.slice(0, 100);
+  if (limitations.length > 100)
+    manifest.coverage.limitations.push(
+      `${limitations.length - 100} additional coverage diagnostics omitted`,
+    );
   writeFileSync(
     join(dir, 'manifest.json'),
     JSON.stringify(
