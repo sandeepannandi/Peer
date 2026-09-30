@@ -73,6 +73,19 @@ describe('postReview', () => {
     expect(reviewPosted(db, 'acme', 'api', 42, 'abc123')).toBe(false);
   });
 
+  it('does not repeat a successful POST if local recording fails', async () => {
+    db.exec(
+      `CREATE TRIGGER fail_review_record BEFORE INSERT ON reviews BEGIN SELECT RAISE(ABORT, 'disk failure'); END;`,
+    );
+    const octokit = stubOctokit();
+    await expect(postReview(octokit, db, options)).rejects.toBeInstanceOf(AmbiguousReviewPostError);
+    db.exec('DROP TRIGGER fail_review_record');
+    await expect(postReview(octokit, db, options)).rejects.toBeInstanceOf(AmbiguousReviewPostError);
+    expect(
+      octokit.request.mock.calls.filter((c: unknown[]) => String(c[0]).startsWith('POST')),
+    ).toHaveLength(1);
+  });
+
   it('does not POST a changed head or when the worker lost its lease', async () => {
     const octokit = stubOctokit();
     await expect(postReview(octokit, db, { ...options, headSha: 'old' })).rejects.toBeInstanceOf(
