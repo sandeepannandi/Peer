@@ -1,6 +1,16 @@
 import { readFileSync } from 'node:fs';
-import { App } from 'octokit';
+import { App, Octokit } from 'octokit';
 import type { Env } from '../config/env.js';
+
+export const PeerOctokit = Octokit.defaults({
+  // Writes are non-idempotent. Queue retries happen only before a posting
+  // claim; transport retries must not bypass that durable claim.
+  retry: { retries: 0 },
+  throttle: {
+    onRateLimit: () => false,
+    onSecondaryRateLimit: () => false,
+  },
+});
 
 /** Build the GitHub App client: app id + PEM private key (file or base64). */
 export function createApp(env: Env): App {
@@ -32,5 +42,9 @@ export function createApp(env: Env): App {
     );
   }
 
-  return new App({ appId: GITHUB_APP_ID, privateKey });
+  return new App({
+    appId: GITHUB_APP_ID,
+    privateKey,
+    Octokit: PeerOctokit,
+  });
 }
