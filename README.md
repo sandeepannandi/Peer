@@ -176,8 +176,7 @@ host isolation and immutable context snapshots remain separate hardening.
 ### Snapshot evidence and coverage
 
 Each job writes `manifest.json` with its checked PR head, diff hash, and every
-packed source's repository/path, commit (when available), content hash and source
-text. Committed context is read from pinned Git blobs, not mutable working-tree
+packed source's repository/path, commit (when available), content hash and line counts. The host retains exact source text for validation. Committed context is read from pinned Git blobs, not mutable working-tree
 bytes. Local fixture sources are explicitly unpinned. PR metadata is checked before
 and after diff/files acquisition; a changed head or base aborts the snapshot.
 
@@ -211,7 +210,7 @@ cap (a bounded ranked pool) so one oversized top result cannot hide smaller matc
 Content search reads pinned committed blobs when Git provenance exists; local
 fixtures use deterministic sorted file walks. Missing mirrors, unreadable/binary
 inputs, oversized content, term/file/result limits and packing omissions appear
-in coverage diagnostics. The content scan remains capped at 1,000 files/repo,
+in coverage diagnostics (up to 100 distinct notes plus an omitted-count note). The content scan remains capped at 1,000 files/repo,
 512 KiB/source and 15 terms; it is not exhaustive. Index matches remain heuristic.
 The on-disk manifest carries hashes/commit identities and line counts, not duplicate
 source text; the host retains exact evidence privately for validation. Prompt,
