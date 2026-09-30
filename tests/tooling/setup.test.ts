@@ -42,4 +42,19 @@ describe('tooling setup', () => {
     expect(readFileSync(join(root, 'eslint.config.js'), 'utf8')).toContain('typescript-eslint');
     expect(readFileSync(join(root, '.prettierrc.json'), 'utf8')).toContain('singleQuote');
   });
+  it('documents runnable entry points and an isolated compiled demo', () => {
+    const pkg = readJson('package.json') as { scripts: Record<string, string> };
+    expect(pkg.scripts['demo:local']).toBe('npm run build && node scripts/demo-local.mjs');
+    expect(pkg.scripts['smoke:compiled']).toBe('node scripts/demo-local.mjs');
+    const guide = readFileSync(join(root, 'CONTRIBUTING.md'), 'utf8');
+    expect(guide).toContain('cd Peer');
+    expect(guide).not.toContain('cd OstryaAIOA');
+    expect(guide).toContain('npm run demo:local');
+    expect(guide).toContain('PowerShell');
+    const ci = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8');
+    expect(ci).toContain('windows-latest');
+    expect(readFileSync(join(root, '.gitattributes'), 'utf8')).toContain('* text=auto eol=lf');
+    expect(ci).toContain('npm run build');
+    expect(ci).toContain('npm run smoke:compiled');
+  });
 });

@@ -21,7 +21,7 @@ updates:
       patch:
         update-types:
           - patch
-reviewers:
-  - sandeepannandi
-assignees:
-  - sandeepannandi
+    reviewers:
+      - sandeepannandi
+    assignees:
+      - sandeepannandi

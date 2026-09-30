@@ -98,8 +98,12 @@ describe('review tool boundary', () => {
     expect(await decision(tool, args)).toBe('deny');
   });
 
-  it('permits absolute paths within the workspace', async () => {
-    expect(await decision('Read', { file_path: join(root, 'diff.txt') })).toBe('allow');
+  it('permits POSIX workspace absolute paths but rejects native Windows path syntax', async () => {
+    // Policy deliberately rejects drive letters/backslashes. Keep that boundary
+    // on Windows too; packed relative forward-slash paths are tested above.
+    expect(await decision('Read', { file_path: join(root, 'diff.txt') })).toBe(
+      process.platform === 'win32' ? 'deny' : 'allow',
+    );
   });
 
   it('denies absolute sibling paths sharing the workspace prefix', async () => {

@@ -1,0 +1,8 @@
+# Keep checked-in source/config fixtures identical on Windows and POSIX.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

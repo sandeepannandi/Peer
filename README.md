@@ -15,7 +15,7 @@ The review reasoning runs through **Claude Code** (subscription auth via `claude
 - **CLI-first, bot-ready** — one CLI plus a webhook listener sharing a single review pipeline
 - **Structured output** — zod-validated JSON reviews, one repair retry, inline comments anchored to diff lines, deduped per head commit
 - **Zero-credential proof** — `--local` fixture mode runs the retrieval and context-packing pipeline against bundled fixtures, then uses a deterministic stub reviewer (no GitHub access or API key needed)
-- **Tested** — 95 tests across 22 suites; engine calls are dependency-injected, so tests never hit the network
+- **Tested** — Deterministic regression tests; engine calls are dependency-injected, so tests never hit the network
 
 ---
 
@@ -23,7 +23,7 @@ The review reasoning runs through **Claude Code** (subscription auth via `claude
 
 1. **Mirror** — shallow-clones the org's repositories and indexes their files and symbols into SQLite.
 2. **Probe** — parses the PR diff into a numbered diff and extracts probe terms: symbols, imports, routes, tables.
-3. **Context pack** — finds matching files in the _other_ repos, ranks them, and stages the top files next to the numbered diff (capped by count and token budget), plus org pattern files (`AGENTS.md`, `README.md`).
+3. **Context pack** - finds matching files in the _other_ repos, ranks them, and stages the top files next to the numbered diff (capped by count and character budget), plus org pattern files (`AGENTS.md`, `README.md`).
 4. **Review** — Claude Code reviews the diff against the pack and returns a single JSON review: summary, verdict, strengths, and findings with severity, category, file, line, suggestion, and cross-repo evidence.
 5. **Post** — the JSON is schema-validated, findings are anchored to real new-file lines, and the review is posted as inline comments (or saved locally without `--post`).
 
@@ -31,7 +31,7 @@ The review reasoning runs through **Claude Code** (subscription auth via `claude
 
 ## Requirements
 
-- Node.js **20+**
+- Node.js **20+** (CI checks Node 20 and 22 on Linux and Windows)
 - `git`
 - Claude Code CLI, installed and logged in with your subscription (`claude login`)
 
@@ -39,13 +39,32 @@ The review reasoning runs through **Claude Code** (subscription auth via `claude
 
 ## Setup
 
+From a fresh checkout (Bash or PowerShell):
+
 ```sh
-npm install
-cp .env.example .env     # then fill in your credentials
+git clone https://github.com/sandeepannandi/Peer.git
+cd Peer
+npm ci
+npm run demo:local
 npm run ci
 ```
 
-Verify the environment with `peer doctor` (git, Claude Code, GitHub App credentials, SQLite).
+The compiled offline demo requires no `.env`, Claude login or GitHub credentials.
+It uses synthetic fixtures and a deterministic stub reviewer, checks the saved
+review, then removes its temporary data. It makes no AI-quality claim.
+
+For live use, copy `.env.example` to `.env` and fill in your GitHub App settings:
+`cp .env.example .env` in Bash, or `Copy-Item .env.example .env` in PowerShell.
+Then run `npm run dev -- doctor`. Alternatively build with `npm run build` and
+run `node dist/index.js doctor`. The package is private; setup does not install
+`peer` globally. In the command table below, `peer` means either of those CLI
+entry points.
+
+The auth check uses `claude auth status --json`, requiring a zero exit status
+and explicit first-party `claude.ai` login. Failed, empty, unknown or API-key
+output is not a subscription login. This checks reported local auth, not paid
+request success, subscription entitlement or commercial-use permission. Update
+an older CLI if auth status is unsupported. No model call is made by doctor.
 
 ---
 
@@ -62,8 +81,9 @@ Verify the environment with `peer doctor` (git, Claude Code, GitHub App credenti
 | `peer webhook [--port <n>]`                              | Bot mode: auto-review PRs on `opened`/`synchronize`                                                |
 
 ```sh
-npm run dev -- review --owner acme --repo repo-a --pr 1 --local
-./scripts/demo.sh <org> <repo> <pr> --post
+npm run demo:local
+# Live authenticated Bash workflow, optional posting:
+./scripts/demo.sh <org> <repo> <pr> [--post]
 ```
 
 ---
@@ -97,7 +117,7 @@ src/
 ├── local/            fixture mode (deterministic reviewer)
 ├── store/db.ts       SQLite schema + queries
 └── util/             git wrapper (secret redaction), diff parser, doctor, logging
-tests/                22 vitest suites, 95 tests, bundled fixture repos
+tests/                Vitest suites and bundled fixture repos
 ```
 
 ---
@@ -217,3 +237,7 @@ source text; the host retains exact evidence privately for validation. Prompt,
 manifest metadata, system instructions and SDK overhead are outside this _content_
 character limit, so it is not a model context-window guarantee. Comment-only
 coverage gating remains in force.
+
+On Windows the reviewer must use workspace-relative forward-slash paths.
+Native drive-letter/backslash tool paths are deliberately denied by the same
+conservative boundary; enabling the CI matrix does not relax that policy.

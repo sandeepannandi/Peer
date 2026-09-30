@@ -18,17 +18,13 @@ afterEach(() => {
 });
 
 function stubRun(
-  overrides: Partial<Record<string, { ok?: boolean; stdout?: string }>> = {},
+  overrides: Partial<Record<string, { ok?: boolean; stdout?: string; stderr?: string }>> = {},
 ): RunFn {
   return async (command: string, args: string[] = []) => {
-    const key = args.includes('doctor')
-      ? 'doctor'
-      : command.includes('claude')
-        ? 'claude'
-        : command;
+    const key = args.includes('status') ? 'auth' : command.includes('claude') ? 'claude' : command;
     const override = overrides[key];
     if (override) {
-      return { ok: override.ok ?? true, stdout: override.stdout };
+      return { ok: override.ok ?? true, stdout: override.stdout, stderr: override.stderr };
     }
     return { ok: true, stdout: `${command} works` };
   };
@@ -40,7 +36,13 @@ describe('runDoctor', () => {
       env,
       stubRun({
         claude: { ok: true, stdout: 'claude 2.1.227' },
-        doctor: { stdout: 'Everything OK' },
+        auth: {
+          stdout: JSON.stringify({
+            loggedIn: true,
+            authMethod: 'claude.ai',
+            apiProvider: 'firstParty',
+          }),
+        },
       }),
     );
 
@@ -56,7 +58,7 @@ describe('runDoctor', () => {
       env,
       stubRun({
         claude: { ok: false, stdout: '' },
-        doctor: { ok: false, stdout: 'Not signed in to claude.ai' },
+        auth: { ok: false, stdout: 'Not signed in to claude.ai' },
       }),
     );
 
@@ -72,13 +74,91 @@ describe('runDoctor', () => {
       env,
       stubRun({
         claude: { ok: true, stdout: 'claude 2.1.227' },
-        doctor: { ok: false, stdout: 'Not signed in to claude.ai' },
+        auth: { ok: false, stdout: 'Not signed in to claude.ai' },
       }),
     );
 
     const auth = results.find((r) => r.name === 'claude auth')!;
     expect(auth.ok).toBe(false);
-    expect(auth.detail).toContain('claude login');
+    expect(auth.detail).toContain('claude auth login');
+  });
+
+  it.each([
+    { ok: false, stderr: 'expired session; private@example.com' },
+    {
+      ok: false,
+      stdout: JSON.stringify({
+        loggedIn: true,
+        authMethod: 'claude.ai',
+        apiProvider: 'firstParty',
+      }),
+    },
+    { ok: true, stdout: '' },
+    { ok: true, stdout: 'Everything OK' },
+    { ok: true, stdout: '{bad json' },
+    { ok: true, stdout: 'null' },
+    {
+      ok: true,
+      stdout: JSON.stringify({
+        loggedIn: false,
+        authMethod: 'claude.ai',
+        apiProvider: 'firstParty',
+      }),
+    },
+    {
+      ok: true,
+      stdout: JSON.stringify({
+        loggedIn: 'true',
+        authMethod: 'claude.ai',
+        apiProvider: 'firstParty',
+      }),
+    },
+    {
+      ok: true,
+      stdout: JSON.stringify({ loggedIn: true, authMethod: 'api_key', apiProvider: 'firstParty' }),
+    },
+    {
+      ok: true,
+      stdout: JSON.stringify({ loggedIn: true, authMethod: 'claude.ai', apiProvider: 'bedrock' }),
+    },
+    {
+      ok: true,
+      stdout: JSON.stringify({
+        loggedIn: true,
+        authMethod: 'claude.ai',
+        apiProvider: 'firstParty',
+        apiKeySource: 'private@example.com',
+      }),
+    },
+  ])('does not infer subscription auth from failures or ambiguous output: %j', async (auth) => {
+    const results = await runDoctor(env, stubRun({ auth }));
+    const result = results.find((r) => r.name === 'claude auth')!;
+    expect(result.ok).toBe(false);
+    expect(result.detail).not.toContain('private@example.com');
+  });
+
+  it('uses auth status JSON, never diagnostic text, and skips auth when binary is absent', async () => {
+    const calls: string[][] = [];
+    const run: RunFn = async (_command, args = []) => {
+      calls.push(args);
+      return {
+        ok: true,
+        stdout: JSON.stringify({
+          loggedIn: true,
+          authMethod: 'claude.ai',
+          apiProvider: 'firstParty',
+        }),
+      };
+    };
+    await runDoctor(env, run);
+    expect(calls).toContainEqual(['auth', 'status', '--json']);
+    expect(calls).not.toContainEqual(['doctor']);
+    calls.length = 0;
+    await runDoctor(env, async (_command, args = []) => {
+      calls.push(args);
+      return { ok: false };
+    });
+    expect(calls).not.toContainEqual(['auth', 'status', '--json']);
   });
 
   it('fails the github app check when credentials are missing or invalid', async () => {
