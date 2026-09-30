@@ -31,7 +31,7 @@ async function defaultRun(
   args: string[] = [],
 ): Promise<{ ok: boolean; stdout?: string; stderr?: string }> {
   try {
-    const { stdout, stderr } = await execa(command, args);
+    const { stdout, stderr } = await execa(command, args, { timeout: 15000 });
     return { ok: true, stdout, stderr };
   } catch (err) {
     const detail = err as { stdout?: string; stderr?: string; message?: string };
@@ -55,17 +55,33 @@ export async function runDoctor(env: Env, run: RunFn = defaultRun): Promise<Doct
       : 'Claude Code CLI not reachable — run npm install -g @anthropic-ai/claude-code',
   });
 
-  const doctor = await run(claude, ['doctor']);
-  const signedIn = !/not signed in/i.test(doctor.stdout ?? '');
-  const authDetail = !claudeVersion.ok
-    ? 'Claude Code CLI not reachable — run npm install -g @anthropic-ai/claude-code'
-    : signedIn
-      ? 'Claude subscription session found'
-      : 'Not signed in — run `claude login` with your subscription account';
+  // doctor is installation diagnostics, not proof of an authenticated session.
+  // Do not expose raw auth output: it can include account identifiers.
+  const auth = claudeVersion.ok ? await run(claude, ['auth', 'status', '--json']) : null;
+  let signedIn = false;
+  if (auth?.ok) {
+    try {
+      const status: unknown = JSON.parse(auth.stdout ?? '');
+      if (status && typeof status === 'object') {
+        const fields = status as Record<string, unknown>;
+        signedIn =
+          fields.loggedIn === true &&
+          fields.authMethod === 'claude.ai' &&
+          fields.apiProvider === 'firstParty' &&
+          !fields.apiKeySource;
+      }
+    } catch {
+      /* Unknown output fails closed, even with a zero exit status. */
+    }
+  }
   results.push({
     name: 'claude auth',
-    ok: claudeVersion.ok && signedIn,
-    detail: authDetail,
+    ok: signedIn,
+    detail: !claudeVersion.ok
+      ? 'Claude Code CLI not reachable - install or update Claude Code'
+      : signedIn
+        ? 'Claude subscription login reported by auth status (no model request tested)'
+        : 'Subscription login not verified - run `claude auth login`, then `claude auth status --json`; update older CLIs if unsupported',
   });
 
   try {
