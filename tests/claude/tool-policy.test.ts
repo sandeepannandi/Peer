@@ -87,6 +87,8 @@ describe('review tool boundary', () => {
     ['Glob', { pattern: '../*' }],
     ['Glob', { pattern: '/**/*' }],
     ['Glob', { pattern: '{safe,../*}' }],
+    ['Glob', { pattern: '{safe,/etc/*}' }],
+    ['Glob', { pattern: '@(safe|/etc/*)' }],
     ['Glob', { pattern: '..?(x)/*' }],
     ['Glob', { pattern: '~/*' }],
     ['Glob', { pattern: 'C:/*' }],
