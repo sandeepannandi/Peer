@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
 import { loadEnv, type Env } from './config/env.js';
 import { validateSnapshotReview } from './context/manifest.js';
+import { evaluateRetrieval, loadEvaluationSet, scoreReviews } from './evaluation/benchmark.js';
 import { createApp } from './github/app.js';
 import { createInstallationOctokit } from './github/auth.js';
 import { fetchPr } from './github/pr.js';
@@ -45,6 +46,24 @@ program
     'Cross-repo GitHub code-review bot — reviews pull requests with context from other repos in the org, powered by Claude Code',
   )
   .version('0.1.0');
+
+program
+  .command('benchmark')
+  .description(
+    'Offline synthetic retrieval benchmark or human-adjudicated saved-review score; no model calls',
+  )
+  .option('--dataset <file>', 'Versioned labelled dataset', 'benchmarks/cross-repo-v1.json')
+  .option('--judgments <file>', 'Human semantic adjudication manifest for saved model outputs')
+  .action((opts: { dataset: string; judgments?: string }) => {
+    const data = loadEvaluationSet(opts.dataset);
+    process.stdout.write(
+      JSON.stringify(
+        opts.judgments ? scoreReviews(data, opts.judgments) : evaluateRetrieval(data),
+        null,
+        2,
+      ) + '\n',
+    );
+  });
 
 interface ReviewOptions {
   owner: string;
