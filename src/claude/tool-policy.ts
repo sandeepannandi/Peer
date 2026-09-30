@@ -76,6 +76,7 @@ export function createReviewToolPolicy(workspaceDir: string): {
             args.pattern.includes('..') ||
             args.pattern.includes('~') ||
             args.pattern.includes(':') ||
+            /[{}()]/.test(args.pattern) ||
             isAbsolute(args.pattern)
           ) {
             throw new Error('Unsafe glob pattern.');
