@@ -105,9 +105,9 @@ describe('buildContextPack', () => {
   it('honours the budget and reports skipped files', () => {
     setup();
 
-    // budget=300 → retrievedBudget=150, patternBudget=90.
+    // budget=180 includes source headers.
     // File sizes (content+header): shared/user-client=74, web/api=66, web/other=69, web/README=41.
-    // Retrieved phase fits 74 + 66 = 140 ≤ 150, skips other (69 > 10 remaining). Pattern fits 41 ≤ 90.
+    // Sources fit 74 + 66, leaving too little for other source and README.
     const pack = buildContextPack({
       db,
       mirrorRoot,
@@ -115,12 +115,12 @@ describe('buildContextPack', () => {
       prRepo: 'api',
       numberedDiff: '',
       probes: PROBES,
-      budgetChars: 300,
+      budgetChars: 180,
       workspaceRoot,
     });
 
-    expect(pack.contextFiles).toBe(3); // 2 retrieved + 1 pattern
-    expect(pack.skippedForBudget).toBe(1); // web/other.ts
+    expect(pack.contextFiles).toBe(2); // sources first
+    expect(pack.skippedForBudget).toBe(2); // other source + pattern
   });
 
   it('fails with a clear message when nothing has been mirrored', () => {
@@ -289,5 +289,62 @@ describe('buildContextPack', () => {
     const written = readdirSync(contextDir);
     const hasRepoBClient = written.some((n) => n.includes('repo-b') && n.includes('client'));
     expect(hasRepoBClient).toBe(true);
+  });
+});
+
+describe('shared diff/source character budget', () => {
+  it('counts numbered diff and headers in the budget, and fails oversized diffs', () => {
+    setup();
+    const pack = buildContextPack({
+      db,
+      mirrorRoot,
+      owner: 'acme',
+      prRepo: 'api',
+      numberedDiff: 'd'.repeat(120),
+      probes: PROBES,
+      budgetChars: 200,
+      workspaceRoot,
+    });
+    const total =
+      120 +
+      readdirSync(join(pack.dir, 'context')).reduce(
+        (n, f) => n + readFileSync(join(pack.dir, 'context', f), 'utf8').length,
+        0,
+      );
+    expect(total).toBeLessThanOrEqual(200);
+    expect(pack.skippedForBudget).toBeGreaterThan(0);
+    expect(() =>
+      buildContextPack({
+        db,
+        mirrorRoot,
+        owner: 'acme',
+        prRepo: 'api',
+        numberedDiff: 'd'.repeat(201),
+        probes: PROBES,
+        budgetChars: 200,
+        workspaceRoot,
+      }),
+    ).toThrow('exceeds context');
+  });
+  it('searches beyond a too-large top candidate and preserves smaller matching sources', () => {
+    setup();
+    writeFileSync(
+      join(repoDir('shared'), 'src', 'user-client.ts'),
+      'export class UserClient {}\n' + 'x'.repeat(5000),
+    );
+    indexRepos(db, mirrorRoot, 'acme');
+    const pack = buildContextPack({
+      db,
+      mirrorRoot,
+      owner: 'acme',
+      prRepo: 'api',
+      numberedDiff: '',
+      probes: PROBES,
+      maxFiles: 1,
+      budgetChars: 200,
+      workspaceRoot,
+    });
+    expect(pack.manifest.files.some((f) => f.file === 'src/api.ts')).toBe(true);
+    expect(pack.manifest.coverage.complete).toBe(false);
   });
 });
