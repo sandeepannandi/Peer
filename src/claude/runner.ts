@@ -1,11 +1,7 @@
 import { query, type Options, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import type { Env } from '../config/env.js';
 import { parseReviewText, type Review } from '../review/schema.js';
-
-// The review agent may inspect/analyse the workspace but must not have
-// arbitrary shell execution or modification capability. Bash is blocked
-// via disallowedTools; only Read, Grep, and Glob are available.
-const READ_ONLY_TOOLS = ['Read', 'Grep', 'Glob'] as const;
+import { createReviewToolPolicy, READ_ONLY_TOOLS } from './tool-policy.js';
 
 export interface ClaudeRunOptions {
   env: Env;
@@ -25,6 +21,7 @@ export async function runClaudeReview(
   opts: ClaudeRunOptions,
   queryFn: QueryFn = query,
 ): Promise<string> {
+  const policy = createReviewToolPolicy(opts.workspaceDir);
   const stream = queryFn({
     prompt: opts.prompt,
     options: {
@@ -32,8 +29,15 @@ export async function runClaudeReview(
       model: opts.env.CLAUDE_MODEL,
       cwd: opts.workspaceDir,
       allowedTools: [...READ_ONLY_TOOLS],
-      disallowedTools: ['Bash'],
-      permissionMode: 'bypassPermissions',
+      tools: [...READ_ONLY_TOOLS],
+      permissionMode: 'default',
+      canUseTool: policy.canUseTool,
+      hooks: { PreToolUse: [{ hooks: [policy.beforeTool] }] },
+      settingSources: [],
+      strictMcpConfig: true,
+      mcpServers: {},
+      plugins: [],
+      skills: [],
       maxTurns: opts.env.CLAUDE_MAX_TURNS,
     },
   });
