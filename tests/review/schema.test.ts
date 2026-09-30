@@ -68,7 +68,7 @@ describe('parseReviewText', () => {
     expect(review.strengths).toEqual([]);
   });
 
-  it('strips emoji from all model-generated text', () => {
+  it('strips emoji from prose but preserves exact citation quotes', () => {
     const review = parseReviewText(
       JSON.stringify({
         summary: 'Great ✅ work 🎉',
@@ -91,7 +91,7 @@ describe('parseReviewText', () => {
     expect(review.findings[0]?.title).toBe('Bug');
     expect(review.findings[0]?.body).toBe('Fix this issue');
     expect(review.findings[0]?.suggestion).toBe('Do it now');
-    expect(review.findings[0]?.evidence[0]?.quote).toBe('call here');
+    expect(review.findings[0]?.evidence[0]?.quote).toBe('call 💥 here');
   });
 
   it('rejects an invalid category', () => {
