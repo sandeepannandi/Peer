@@ -1,7 +1,9 @@
-import { existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
-import { readFileUtf8, walkFiles } from '../mirror/indexer.js';
+import { walkFiles } from '../mirror/indexer.js';
 import { listReposByOwner, type Db } from '../store/db.js';
+import { pinCommit, readSnapshot } from './manifest.js';
 import type { Probes } from './probes.js';
 
 export interface ContextCandidate {
@@ -23,6 +25,7 @@ export function findContextFiles(
   prRepo: string,
   probes: Probes,
   maxFiles: number,
+  diagnostics: string[] = [],
 ): ContextCandidate[] {
   const byFile = new Map<string, ContextCandidate>();
 
@@ -78,18 +81,54 @@ export function findContextFiles(
 
   // 3. Content hits — Node walk over the mirror (rg is an optional fallback).
   const terms = contentTerms(probes);
+  if (
+    [...probes.routes, ...probes.tables, ...probes.imports, ...probes.symbols].length >
+    MAX_CONTENT_TERMS
+  )
+    diagnostics.push('Content probe limit may omit terms');
   if (terms.length > 0) {
     for (const repo of listReposByOwner(db, owner)) {
       if (repo.name === prRepo) continue;
       const repoDir = join(mirrorRoot, repo.owner, repo.name);
-      if (!existsSync(repoDir)) continue;
+      if (!existsSync(repoDir)) {
+        diagnostics.push(`Missing mirror: ${owner}/${repo.name}`);
+        continue;
+      }
 
-      let scanned = 0;
-      for (const abs of walkFiles(repoDir)) {
-        if (scanned++ >= MAX_FILES_PER_REPO_SCAN) break;
-        const content = readFileUtf8(abs);
-        if (content === null || Buffer.byteLength(content, 'utf8') > MAX_CONTENT_SCAN_BYTES)
+      const commit = pinCommit(repoDir);
+      let paths: string[];
+      try {
+        paths = commit
+          ? execFileSync('git', ['-C', repoDir, 'ls-tree', '-r', '-z', '--name-only', commit], {
+              encoding: 'utf8',
+              maxBuffer: 8 * 1024 * 1024,
+            })
+              .split('\0')
+              .filter(Boolean)
+          : walkFiles(repoDir).map((abs) => relative(repoDir, abs).split(sep).join('/'));
+      } catch {
+        diagnostics.push(`Unable to list snapshot: ${owner}/${repo.name}`);
+        continue;
+      }
+      paths.sort();
+      if (paths.length > MAX_FILES_PER_REPO_SCAN)
+        diagnostics.push(`Content scan limit: ${owner}/${repo.name} (${paths.length} files)`);
+      for (const rel of paths.slice(0, MAX_FILES_PER_REPO_SCAN)) {
+        let content: string;
+        try {
+          if (!commit && statSync(join(repoDir, rel)).size > MAX_CONTENT_SCAN_BYTES) {
+            diagnostics.push(`Oversized content omitted: ${owner}/${repo.name}/${rel}`);
+            continue;
+          }
+          content = readSnapshot(repoDir, rel, commit);
+        } catch {
+          diagnostics.push(`Unreadable content omitted: ${owner}/${repo.name}/${rel}`);
           continue;
+        }
+        if (content.includes('\0') || Buffer.byteLength(content, 'utf8') > MAX_CONTENT_SCAN_BYTES) {
+          diagnostics.push(`Binary/oversized content omitted: ${owner}/${repo.name}/${rel}`);
+          continue;
+        }
 
         const lower = content.toLowerCase();
         let hits = 0;
@@ -97,7 +136,6 @@ export function findContextFiles(
           if (lower.includes(term)) hits += 1;
         }
         if (hits > 0) {
-          const rel = relative(repoDir, abs).split(sep).join('/');
           bump(`${owner}/${repo.name}`, rel, WEIGHTS.content * hits, 'content');
         }
       }
@@ -115,6 +153,10 @@ export function findContextFiles(
       a.repo.localeCompare(b.repo) ||
       a.file.localeCompare(b.file),
   );
+  if (candidates.length > maxFiles)
+    diagnostics.push(
+      `${candidates.length - maxFiles} ranked candidates omitted by retrieval limit`,
+    );
   return candidates.slice(0, maxFiles);
 }
 
