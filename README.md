@@ -197,3 +197,24 @@ The manifest pins included evidence, not the completeness of the retrieval index
 It also does not prove semantic correctness of model claims or authenticate source
 comments as instructions. Context code/docs are untrusted data. Stronger retrieval
 coverage is a later work item; no flag silently bypasses this verdict gate.
+
+### Context budget and retrieval limits
+
+`CONTEXT_TOKEN_BUDGET` is a legacy name: its unit is JavaScript string characters,
+not model tokenizer tokens. It now caps numbered diff plus packed source text and
+source headers together. A diff exceeding that character budget aborts clearly,
+never silently truncates. Source files get first use of the remaining space;
+README/AGENTS supplements have a 30% cap but reserve no unused allowance. The
+source file cap remains `REVIEW_MAX_CONTEXT_FILES`. Retrieval looks beyond that
+cap (a bounded ranked pool) so one oversized top result cannot hide smaller matches.
+
+Content search reads pinned committed blobs when Git provenance exists; local
+fixtures use deterministic sorted file walks. Missing mirrors, unreadable/binary
+inputs, oversized content, term/file/result limits and packing omissions appear
+in coverage diagnostics. The content scan remains capped at 1,000 files/repo,
+512 KiB/source and 15 terms; it is not exhaustive. Index matches remain heuristic.
+The on-disk manifest carries hashes/commit identities and line counts, not duplicate
+source text; the host retains exact evidence privately for validation. Prompt,
+manifest metadata, system instructions and SDK overhead are outside this _content_
+character limit, so it is not a model context-window guarantee. Comment-only
+coverage gating remains in force.
