@@ -96,6 +96,37 @@ describe('createWebhookHandler', () => {
     ]);
   });
 
+  it('does not acknowledge while enqueue is still pending', async () => {
+    let persisted!: () => void;
+    const persistence = new Promise<void>((resolve) => {
+      persisted = resolve;
+    });
+    const end = vi.fn();
+    const req = {
+      headers: {
+        'x-github-delivery': 'delayed',
+        'x-hub-signature-256': sign(PR_PAYLOAD),
+        'x-github-event': 'pull_request',
+      },
+      on: (event: string, cb: (chunk?: Buffer) => void) => {
+        if (event === 'data') cb(Buffer.from(PR_PAYLOAD));
+        if (event === 'end') cb();
+        return req;
+      },
+    } as unknown as import('node:http').IncomingMessage;
+    const res = {
+      writeHead: vi.fn(() => res),
+      end,
+    } as unknown as import('node:http').ServerResponse;
+    const running = createWebhookHandler(env, async () => persistence)(req, res);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(end).not.toHaveBeenCalled();
+    persisted();
+    await running;
+    expect(end).toHaveBeenCalledWith('accepted');
+  });
+
   it('returns 503 when durable enqueue fails', async () => {
     const status = await runHandler(
       createWebhookHandler(env, async () => {
