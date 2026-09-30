@@ -124,6 +124,25 @@ describe('runClaudeReviewWithRetry', () => {
     }
   });
 
+  it('applies citation validation to both attempts and never returns invalid citations', async () => {
+    const calls = { prompts: [] as string[], options: [] as (Options | undefined)[] };
+    let validations = 0;
+    await expect(
+      runClaudeReviewWithRetry(
+        {
+          ...opts(),
+          validateReview: () => {
+            validations++;
+            throw new Error('Unknown citation');
+          },
+        },
+        fakeQuery([JSON.stringify(VALID_REVIEW)], calls),
+      ),
+    ).rejects.toThrow('Unknown citation');
+    expect(validations).toBe(2);
+    expect(calls.prompts).toHaveLength(2);
+  });
+
   it('throws when both attempts are invalid', async () => {
     const queryFn: QueryFn = async function* () {
       yield { type: 'result', subtype: 'success', result: 'still not json' } as SDKMessage;

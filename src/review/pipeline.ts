@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { buildReviewPrompt, buildReviewSystemPrompt } from '../claude/prompt.js';
 import { runClaudeReviewWithRetry } from '../claude/runner.js';
 import type { Env } from '../config/env.js';
+import { validateSnapshotReview, verifyPackedSnapshot } from '../context/manifest.js';
 import { buildContextPack, type PackResult } from '../context/pack.js';
 import { extractProbes } from '../context/probes.js';
 import { createApp } from '../github/app.js';
@@ -41,6 +42,8 @@ export function buildPack(
   repo: string,
   diff: string,
   workspaceRoot: string,
+  prHead?: string,
+  coverageLimits?: string[],
 ): { fileDiffs: FileDiff[]; pack: PackResult } {
   const fileDiffs = parseUnifiedDiff(diff);
   const probes = extractProbes(fileDiffs);
@@ -54,6 +57,8 @@ export function buildPack(
     maxFiles: env.REVIEW_MAX_CONTEXT_FILES,
     budgetChars: env.CONTEXT_TOKEN_BUDGET,
     workspaceRoot,
+    prHead,
+    coverageLimits,
   });
   return { fileDiffs, pack };
 }
@@ -106,7 +111,20 @@ export async function reviewPullRequest(
       'mirror + index ensured',
     );
 
-    const { fileDiffs, pack } = buildPack(env, db, owner, repo, pr.diff, workspaceRoot);
+    const { fileDiffs, pack } = buildPack(
+      env,
+      db,
+      owner,
+      repo,
+      pr.diff,
+      workspaceRoot,
+      pr.headSha,
+      [
+        ...mirrored.failed.map((r) => `Mirror failed: ${r.repo}`),
+        ...mirrored.skipped.map((r) => `Mirror skipped: ${r}`),
+        ...pr.files.filter((f) => f.patch === null).map((f) => `No diff patch: ${f.path}`),
+      ],
+    );
     logger.info(
       { dir: pack.dir, contextFiles: pack.contextFiles, skippedForBudget: pack.skippedForBudget },
       'context pack built',
@@ -128,6 +146,10 @@ export async function reviewPullRequest(
       workspaceDir: pack.dir,
       systemPrompt,
       prompt,
+      validateReview: (review) => {
+        verifyPackedSnapshot(pack.dir, pack.manifest);
+        return validateSnapshotReview(review, pack.manifest, fileDiffs);
+      },
     });
 
     if (post) {

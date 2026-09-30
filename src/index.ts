@@ -4,6 +4,7 @@ import 'dotenv/config';
 import { join } from 'node:path';
 import { Command, InvalidArgumentError } from 'commander';
 import { loadEnv, type Env } from './config/env.js';
+import { validateSnapshotReview } from './context/manifest.js';
 import { createApp } from './github/app.js';
 import { createInstallationOctokit } from './github/auth.js';
 import { fetchPr } from './github/pr.js';
@@ -91,7 +92,12 @@ program
         join(env.DATA_DIR, 'workspace'),
       );
       logger.info({ dir: pack.dir, contextFiles: pack.contextFiles }, 'local context pack built');
-      const review = runLocalReviewer(pack.dir, fileDiffs, `${opts.owner}/${opts.repo}#${opts.pr}`);
+      const localReview = runLocalReviewer(
+        pack.dir,
+        fileDiffs,
+        `${opts.owner}/${opts.repo}#${opts.pr}`,
+      );
+      const review = validateSnapshotReview(localReview, pack.manifest, fileDiffs);
       saveLocalReview(pack.dir, review, fileDiffs, env.MAX_REVIEW_COMMENTS);
       db.close();
       return;

@@ -172,3 +172,28 @@ request may still complete. Peer deliberately provides no blind retry/reset comm
 Multiple hosts must not share this SQLite database over a network filesystem.
 A worker lease fences posting, not hostile/stalled processes accessing mirror files;
 host isolation and immutable context snapshots remain separate hardening.
+
+### Snapshot evidence and coverage
+
+Each job writes `manifest.json` with its checked PR head, diff hash, and every
+packed source's repository/path, commit (when available), content hash and source
+text. Committed context is read from pinned Git blobs, not mutable working-tree
+bytes. Local fixture sources are explicitly unpinned. PR metadata is checked before
+and after diff/files acquisition; a changed head or base aborts the snapshot.
+
+The host validates both initial and repaired model replies: finding files/lines
+must exist in the diff; evidence must identify a packed source; line numbers must
+be positive integers within that source; quotes must match the exact text and
+cited line. Cross-repo findings need evidence. Invented citations fail the review,
+not merely fall back to body comments. Source identities/quotes are preserved
+without prose normalization, and staged input bytes are rechecked after the run.
+
+Peer's current retrieval is heuristic, not an exhaustive consumer inventory.
+Coverage is therefore explicitly incomplete: output is comment-only, never an
+approval or request-changes verdict, with a coverage note. Missing mirrors,
+unpinned inputs, omitted patches and budget omissions add named limits. This
+prevents an empty findings list from pretending to prove org-wide compatibility.
+The manifest pins included evidence, not the completeness of the retrieval index.
+It also does not prove semantic correctness of model claims or authenticate source
+comments as instructions. Context code/docs are untrusted data. Stronger retrieval
+coverage is a later work item; no flag silently bypasses this verdict gate.
