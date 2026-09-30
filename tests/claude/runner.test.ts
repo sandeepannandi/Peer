@@ -53,7 +53,7 @@ describe('runClaudeReview', () => {
     expect(calls.prompts).toEqual(['prompt']);
   });
 
-  it('wires the SDK options: model, cwd, read-only tools, bypassPermissions, maxTurns', async () => {
+  it('wires the SDK options: model, cwd, read-only tools, isolated permissions, maxTurns', async () => {
     const calls = { prompts: [] as string[], options: [] as (Options | undefined)[] };
     await runClaudeReview(opts(), fakeQuery(['{}'], calls));
 
@@ -62,8 +62,15 @@ describe('runClaudeReview', () => {
     expect(options?.model).toBe('sonnet');
     expect(options?.cwd).toBe(workspaceDir);
     expect(options?.allowedTools).toEqual(['Read', 'Grep', 'Glob']);
-    expect(options?.disallowedTools).toEqual(['Bash']);
-    expect(options?.permissionMode).toBe('bypassPermissions');
+    expect(options?.tools).toEqual(['Read', 'Grep', 'Glob']);
+    expect(options?.permissionMode).toBe('default');
+    expect(options?.canUseTool).toBeTypeOf('function');
+    expect(options?.hooks?.PreToolUse?.[0].hooks).toHaveLength(1);
+    expect(options?.settingSources).toEqual([]);
+    expect(options?.strictMcpConfig).toBe(true);
+    expect(options?.mcpServers).toEqual({});
+    expect(options?.plugins).toEqual([]);
+    expect(options?.skills).toEqual([]);
     expect(options?.maxTurns).toBe(30);
   });
 
@@ -100,6 +107,7 @@ describe('runClaudeReviewWithRetry', () => {
     const calls = { prompts: [] as string[], options: [] as (Options | undefined)[] };
     const queryFn: QueryFn = async function* (params: { prompt: string; options?: Options }) {
       calls.prompts.push(params.prompt);
+      calls.options.push(params.options);
       const text = calls.prompts.length === 1 ? 'not json at all' : JSON.stringify(VALID_REVIEW);
       yield { type: 'result', subtype: 'success', result: text } as SDKMessage;
     };
@@ -109,6 +117,11 @@ describe('runClaudeReviewWithRetry', () => {
     expect(review.overall).toBe('approve');
     expect(calls.prompts).toHaveLength(2);
     expect(calls.prompts[1]).toContain('could not be parsed');
+    for (const options of calls.options) {
+      expect(options?.tools).toEqual(['Read', 'Grep', 'Glob']);
+      expect(options?.hooks?.PreToolUse?.[0].hooks).toHaveLength(1);
+      expect(options?.permissionMode).toBe('default');
+    }
   });
 
   it('throws when both attempts are invalid', async () => {
