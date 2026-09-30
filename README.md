@@ -237,3 +237,7 @@ source text; the host retains exact evidence privately for validation. Prompt,
 manifest metadata, system instructions and SDK overhead are outside this _content_
 character limit, so it is not a model context-window guarantee. Comment-only
 coverage gating remains in force.
+
+On Windows the reviewer must use workspace-relative forward-slash paths.
+Native drive-letter/backslash tool paths are deliberately denied by the same
+conservative boundary; enabling the CI matrix does not relax that policy.
