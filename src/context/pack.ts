@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { readFileUtf8 } from '../mirror/indexer.js';
 import { listReposByOwner, type Db } from '../store/db.js';
+import { hashText, pinCommit, readSnapshot, type SnapshotManifest } from './manifest.js';
 import type { Probes } from './probes.js';
 import { findContextFiles, type ContextCandidate } from './search.js';
 
@@ -15,6 +15,8 @@ export interface PackOptions {
   maxFiles?: number;
   budgetChars?: number;
   workspaceRoot?: string;
+  prHead?: string;
+  coverageLimits?: string[];
 }
 
 export interface PackResult {
@@ -22,6 +24,7 @@ export interface PackResult {
   dir: string;
   contextFiles: number;
   skippedForBudget: number;
+  manifest: SnapshotManifest;
 }
 
 const PATTERN_FILES = ['AGENTS.md', 'README.md'];
@@ -49,6 +52,30 @@ export function buildContextPack(options: PackOptions): PackResult {
   if (repos.length === 0) {
     throw new Error(`No repos recorded for "${owner}" — run "peer mirror --owner ${owner}" first.`);
   }
+
+  const commits = new Map(
+    repos.map((repo) => [
+      `${repo.owner}/${repo.name}`,
+      pinCommit(join(mirrorRoot, repo.owner, repo.name)),
+    ]),
+  );
+  const manifest: SnapshotManifest = {
+    version: 1,
+    prHead: options.prHead ?? null,
+    diffSha256: hashText(numberedDiff),
+    files: [],
+    coverage: {
+      complete: false,
+      limitations: [
+        'Heuristic retrieval is not an exhaustive consumer search',
+        ...(options.coverageLimits ?? []),
+        ...(!options.prHead ? ['PR head is not pinned (local fixture or context-only run)'] : []),
+        ...repos
+          .filter((repo) => !commits.get(`${repo.owner}/${repo.name}`))
+          .map((repo) => `Unpinned mirror: ${repo.owner}/${repo.name}`),
+      ],
+    },
+  };
 
   const jobId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const dir = join(workspaceRoot, jobId);
@@ -82,17 +109,21 @@ export function buildContextPack(options: PackOptions): PackResult {
 
     let content: string | null;
     try {
-      if (statSync(abs).size > retrievedRemaining) {
+      if (!commits.get(candidate.repo) && statSync(abs).size > retrievedRemaining) {
         skippedForBudget += 1;
         continue;
       }
-      content = readFileUtf8(abs);
+      content = readSnapshot(
+        join(mirrorRoot, owner, repoName),
+        candidate.file,
+        commits.get(candidate.repo) ?? null,
+      );
     } catch {
       skippedForBudget += 1;
       continue;
     }
 
-    if (content === null) {
+    if (content === null || content.includes('\0')) {
       skippedForBudget += 1;
       continue;
     }
@@ -106,6 +137,14 @@ export function buildContextPack(options: PackOptions): PackResult {
     index += 1;
     const name = contextFileName(index, candidate.repo, candidate.file, contextDir);
     writeFileSync(join(contextDir, name), header + content);
+    manifest.files.push({
+      repo: candidate.repo,
+      file: candidate.file,
+      packedPath: `context/${name}`,
+      commit: commits.get(candidate.repo) ?? null,
+      sha256: hashText(content),
+      content,
+    });
     contextFiles += 1;
   }
 
@@ -134,17 +173,21 @@ export function buildContextPack(options: PackOptions): PackResult {
 
     let content: string | null;
     try {
-      if (statSync(abs).size > patternRemaining) {
+      if (!commits.get(candidate.repo) && statSync(abs).size > patternRemaining) {
         skippedForBudget += 1;
         continue;
       }
-      content = readFileUtf8(abs);
+      content = readSnapshot(
+        join(mirrorRoot, owner, repoName),
+        candidate.file,
+        commits.get(candidate.repo) ?? null,
+      );
     } catch {
       skippedForBudget += 1;
       continue;
     }
 
-    if (content === null) {
+    if (content === null || content.includes('\0')) {
       skippedForBudget += 1;
       continue;
     }
@@ -158,10 +201,23 @@ export function buildContextPack(options: PackOptions): PackResult {
     index += 1;
     const name = contextFileName(index, candidate.repo, candidate.file, contextDir);
     writeFileSync(join(contextDir, name), header + content);
+    manifest.files.push({
+      repo: candidate.repo,
+      file: candidate.file,
+      packedPath: `context/${name}`,
+      commit: commits.get(candidate.repo) ?? null,
+      sha256: hashText(content),
+      content,
+    });
     contextFiles += 1;
   }
 
-  return { jobId, dir, contextFiles, skippedForBudget };
+  if (skippedForBudget)
+    manifest.coverage.limitations.push(
+      `${skippedForBudget} inputs skipped for budget or unavailable content`,
+    );
+  writeFileSync(join(dir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+  return { jobId, dir, contextFiles, skippedForBudget, manifest };
 }
 
 function contextFileName(index: number, repo: string, file: string, contextDir: string): string {
