@@ -2,17 +2,27 @@
 
 ## Setup
 
-Peer requires Node.js 20 or newer, Git, and the Claude Code CLI.
+Local development requires Node.js 20 or newer and Git. Live reviews also
+need a Claude subscription login and GitHub App configuration.
+
+From Bash or PowerShell:
 
 ```sh
-git clone <repository-url>
-cd OstryaAIOA
-npm install
-cp .env.example .env
-npm run doctor
+git clone https://github.com/sandeepannandi/Peer.git
+cd Peer
+npm ci
+npm run demo:local
 ```
 
-Use `npm run doctor` to verify Git, Claude Code, GitHub App credentials, and SQLite. The `--local` review mode is available for development without GitHub or Claude credentials.
+The compiled no-credential demo runs in a temporary directory and cleans up.
+It does not read a project `.env` or contact GitHub/Claude. Its reviewer is a
+deterministic fixture stub, not a live model benchmark.
+
+For live use, copy `.env.example` to `.env` (`cp` in Bash or `Copy-Item` in
+PowerShell) and add the GitHub App settings. Run `npm run dev -- doctor`, or
+`npm run build` then `node dist/index.js doctor`. There is no `npm run doctor`
+script and setup does not install the private package as a global `peer`
+command. Doctor verifies explicit local auth status, not a model request.
 
 ## Quality checks
 
@@ -23,6 +33,8 @@ npm run typecheck
 npm run lint
 npm run format:check
 npm test
+npm run build
+npm run smoke:compiled
 ```
 
 Use `npm run lint:fix` and `npm run format` for automatic fixes. The combined `npm run ci` command runs the complete quality gate.
