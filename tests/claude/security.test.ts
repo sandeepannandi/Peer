@@ -32,15 +32,15 @@ function fakeQuery(calls: { options: (Options | undefined)[] }): QueryFn {
 const opts = () => ({ env, workspaceDir, systemPrompt: 'system', prompt: 'prompt' });
 
 describe('security: agent permission configuration', () => {
-  it('Bash is explicitly in disallowedTools to block arbitrary shell execution', async () => {
+  it('Bash is absent from the actual tool list', async () => {
     const calls = { options: [] as (Options | undefined)[] };
     await runClaudeReview(opts(), fakeQuery(calls));
 
     const options = calls.options[0];
-    expect(options?.disallowedTools).toContain('Bash');
+    expect(options?.tools).not.toContain('Bash');
   });
 
-  it('Bash is NOT in allowedTools (which would grant shell access under bypassPermissions)', async () => {
+  it('Bash is not pre-approved', async () => {
     const calls = { options: [] as (Options | undefined)[] };
     await runClaudeReview(opts(), fakeQuery(calls));
 
@@ -49,7 +49,7 @@ describe('security: agent permission configuration', () => {
     expect(allowed.some((t) => t.startsWith('Bash'))).toBe(false);
   });
 
-  it('only Read, Grep, Glob are in allowedTools (read-only inspection)', async () => {
+  it('only inspection tools are pre-approved', async () => {
     const calls = { options: [] as (Options | undefined)[] };
     await runClaudeReview(opts(), fakeQuery(calls));
 
@@ -57,14 +57,12 @@ describe('security: agent permission configuration', () => {
     expect(options?.allowedTools).toEqual(['Read', 'Grep', 'Glob']);
   });
 
-  it('permissionMode is bypassPermissions (needed for headless operation, but Bash is blocked by disallowedTools)', async () => {
+  it('permission bypass is disabled and every tool call is guarded', async () => {
     const calls = { options: [] as (Options | undefined)[] };
     await runClaudeReview(opts(), fakeQuery(calls));
 
     const options = calls.options[0];
-    expect(options?.permissionMode).toBe('bypassPermissions');
-    // The security invariant: bypassPermissions + disallowedTools: ['Bash']
-    // means the agent can auto-approve Read/Grep/Glob but cannot use Bash.
-    expect(options?.disallowedTools).toEqual(['Bash']);
+    expect(options?.permissionMode).toBe('default');
+    expect(options?.hooks?.PreToolUse?.[0].hooks).toHaveLength(1);
   });
 });
