@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -78,6 +79,34 @@ describe('findContextFiles', () => {
       ['content'],
     ]);
     expect(results.some((r) => r.repo === 'acme/api')).toBe(false);
+  });
+
+  it('exposes result truncation rather than hiding retrieval limits', () => {
+    indexFixture();
+    const limits: string[] = [];
+    findContextFiles(db, mirrorRoot, 'acme', 'api', PROBES, 1, limits);
+    expect(limits.some((l) => l.includes('ranked candidates omitted'))).toBe(true);
+  });
+
+  it('retrieves pinned content even when the working tree erases its route', () => {
+    indexFixture();
+    const dir = repoDir('web');
+    const git = (...args: string[]) => execFileSync('git', ['-C', dir, ...args], { stdio: 'pipe' });
+    git('init');
+    git('config', 'user.name', 'test');
+    git('config', 'user.email', 'test@example.invalid');
+    git('add', '.');
+    git('commit', '-m', 'snapshot');
+    writeFileSync(join(dir, 'src', 'other.ts'), 'dirty file');
+    const results = findContextFiles(
+      db,
+      mirrorRoot,
+      'acme',
+      'api',
+      { paths: [], basenames: [], symbols: [], imports: [], routes: ['/api/v2/users'], tables: [] },
+      10,
+    );
+    expect(results.some((r) => r.file === 'src/other.ts')).toBe(true);
   });
 
   it('respects maxFiles', () => {
