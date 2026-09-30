@@ -53,6 +53,7 @@ describe('tooling setup', () => {
     expect(guide).toContain('PowerShell');
     const ci = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8');
     expect(ci).toContain('windows-latest');
+    expect(readFileSync(join(root, '.gitattributes'), 'utf8')).toContain('* text=auto eol=lf');
     expect(ci).toContain('npm run build');
     expect(ci).toContain('npm run smoke:compiled');
   });
