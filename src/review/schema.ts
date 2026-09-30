@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const EvidenceSchema = z.object({
   repo: z.string(), // org/repo
   file: z.string(),
-  line: z.number().optional(),
+  line: z.number().int().positive().optional(),
   quote: z.string().optional(),
 });
 
@@ -19,7 +19,7 @@ export const FindingCategory = z.enum([
 
 export const FindingSchema = z.object({
   file: z.string(), // path within the PR repo, as in the numbered diff
-  line: z.number().optional(), // new-file line number, as in the numbered diff
+  line: z.number().int().positive().optional(), // new-file line number, as in the numbered diff
   severity: z.enum(['error', 'warning', 'info']),
   category: FindingCategory.optional(),
   title: z.string(),
@@ -67,7 +67,14 @@ export function parseReviewText(text: string): Review {
   const body = stripCodeFence(text);
   const json = JSON.parse(body) as unknown;
   const review = ReviewSchema.parse(json);
-  return stripEmojisDeep(review);
+  const cleaned = stripEmojisDeep(review);
+  // Identity, anchors and exact source quotes must not be normalized.
+  for (const [index, finding] of cleaned.findings.entries()) {
+    const original = review.findings[index]!;
+    finding.file = original.file;
+    finding.evidence = original.evidence;
+  }
+  return cleaned;
 }
 
 function stripCodeFence(text: string): string {
