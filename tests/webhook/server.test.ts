@@ -25,7 +25,7 @@ afterEach(() => {
 const PR_PAYLOAD = JSON.stringify({
   action: 'opened',
   number: 7,
-  pull_request: { number: 7 },
+  pull_request: { number: 7, head: { sha: 'a'.repeat(40) } },
   repository: { name: 'api', owner: { login: 'acme' } },
 });
 
@@ -36,7 +36,7 @@ function sign(body: string): string {
 describe('parsePullRequestPayload', () => {
   it('extracts owner, repo and PR number', () => {
     const event = parsePullRequestPayload(JSON.parse(PR_PAYLOAD) as Record<string, unknown>);
-    expect(event).toEqual({ owner: 'acme', repo: 'api', prNumber: 7 });
+    expect(event).toEqual({ owner: 'acme', repo: 'api', prNumber: 7, headSha: 'a'.repeat(40) });
   });
 
   it('returns null for a malformed payload', () => {
@@ -52,7 +52,7 @@ describe('createWebhookHandler', () => {
   ): Promise<number> {
     // The handler reads req via node's http.IncomingMessage API.
     const req = {
-      headers,
+      headers: { 'x-github-delivery': 'delivery-1', ...headers },
       on: (event: string, cb: (chunk?: Buffer) => void) => {
         if (event === 'data') cb(Buffer.from(body));
         if (event === 'end') cb();
@@ -74,7 +74,7 @@ describe('createWebhookHandler', () => {
     return status;
   }
 
-  it('dispatches a valid pull_request opened event to the review callback', async () => {
+  it('awaits durable enqueue before accepting a valid event', async () => {
     const calls: PullRequestEvent[] = [];
     const handler = createWebhookHandler(
       env,
@@ -85,7 +85,71 @@ describe('createWebhookHandler', () => {
       'x-github-event': 'pull_request',
     });
     expect(status).toBe(202);
-    expect(calls).toEqual([{ owner: 'acme', repo: 'api', prNumber: 7 }]);
+    expect(calls).toEqual([
+      {
+        owner: 'acme',
+        repo: 'api',
+        prNumber: 7,
+        headSha: 'a'.repeat(40),
+        deliveryId: 'delivery-1',
+      },
+    ]);
+  });
+
+  it('does not acknowledge while enqueue is still pending', async () => {
+    let persisted!: () => void;
+    const persistence = new Promise<void>((resolve) => {
+      persisted = resolve;
+    });
+    const end = vi.fn();
+    const req = {
+      headers: {
+        'x-github-delivery': 'delayed',
+        'x-hub-signature-256': sign(PR_PAYLOAD),
+        'x-github-event': 'pull_request',
+      },
+      on: (event: string, cb: (chunk?: Buffer) => void) => {
+        if (event === 'data') cb(Buffer.from(PR_PAYLOAD));
+        if (event === 'end') cb();
+        return req;
+      },
+    } as unknown as import('node:http').IncomingMessage;
+    const res = {
+      writeHead: vi.fn(() => res),
+      end,
+    } as unknown as import('node:http').ServerResponse;
+    const running = createWebhookHandler(env, async () => persistence)(req, res);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(end).not.toHaveBeenCalled();
+    persisted();
+    await running;
+    expect(end).toHaveBeenCalledWith('accepted');
+  });
+
+  it('returns 503 when durable enqueue fails', async () => {
+    const status = await runHandler(
+      createWebhookHandler(env, async () => {
+        throw new Error('disk full');
+      }),
+      PR_PAYLOAD,
+      {
+        'x-hub-signature-256': sign(PR_PAYLOAD),
+        'x-github-event': 'pull_request',
+      },
+    );
+    expect(status).toBe(503);
+  });
+
+  it('rejects missing delivery identifiers', async () => {
+    const enqueue = vi.fn(async () => {});
+    const status = await runHandler(createWebhookHandler(env, enqueue), PR_PAYLOAD, {
+      'x-hub-signature-256': sign(PR_PAYLOAD),
+      'x-github-event': 'pull_request',
+      'x-github-delivery': '',
+    });
+    expect(status).toBe(400);
+    expect(enqueue).not.toHaveBeenCalled();
   });
 
   it('rejects a request with an invalid signature', async () => {

@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
+import { initializeJobs } from './jobs.js';
 
 export type Db = Database.Database;
 
@@ -76,8 +77,10 @@ export function openDb(dbPath: string): Db {
   mkdirSync(dirname(dbPath), { recursive: true });
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
+  db.pragma('synchronous = FULL');
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
+  initializeJobs(db);
   return db;
 }
 

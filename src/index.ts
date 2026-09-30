@@ -13,6 +13,7 @@ import { indexRepos } from './mirror/indexer.js';
 import { mirrorOrgRepos } from './mirror/mirror.js';
 import { buildPack, reviewPullRequest, saveLocalReview } from './review/pipeline.js';
 import { openDb } from './store/db.js';
+import { listJobs } from './store/jobs.js';
 import { runDoctor } from './util/doctor.js';
 import { createLogger } from './util/logger.js';
 import { startWebhookServer } from './webhook/server.js';
@@ -113,13 +114,31 @@ program
       throw new Error('GITHUB_WEBHOOK_SECRET is required for webhook mode — set it in .env');
     }
     const port = opts.port ?? env.WEBHOOK_PORT;
-    startWebhookServer({ ...env, WEBHOOK_PORT: port }, (event) =>
+    startWebhookServer({ ...env, WEBHOOK_PORT: port }, (event, assertOwnership) =>
       reviewPullRequest(
         env,
-        { owner: event.owner, repo: event.repo, prNumber: event.prNumber },
+        {
+          owner: event.owner,
+          repo: event.repo,
+          prNumber: event.prNumber,
+          headSha: event.headSha,
+          assertOwnership,
+        },
         true,
       ),
     );
+  });
+
+program
+  .command('jobs')
+  .description('Show the latest 100 durable webhook jobs, including blocked or failed jobs')
+  .action(() => {
+    const db = openDb(dbPath(loadEnv()));
+    try {
+      process.stdout.write(`${JSON.stringify(listJobs(db), null, 2)}\n`);
+    } finally {
+      db.close();
+    }
   });
 
 program

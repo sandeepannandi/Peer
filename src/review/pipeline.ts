@@ -14,7 +14,7 @@ import { openDb, type Db } from '../store/db.js';
 import { buildNumberedDiff, parseUnifiedDiff, type FileDiff } from '../util/diff.js';
 import { createLogger } from '../util/logger.js';
 import { buildReviewMarkdown, formatReview } from './format.js';
-import { postReview } from './post.js';
+import { postReview, StaleReviewError } from './post.js';
 import type { Review } from './schema.js';
 
 const logger = createLogger();
@@ -23,6 +23,8 @@ export interface ReviewRequest {
   owner: string;
   repo: string;
   prNumber: number;
+  headSha?: string;
+  assertOwnership?: () => void;
 }
 
 export interface ReviewOutcome {
@@ -84,7 +86,11 @@ export async function reviewPullRequest(
   try {
     const app = createApp(env);
     const { octokit, token } = await createInstallationOctokit(app, owner);
+    req.assertOwnership?.();
     const pr = await fetchPr(octokit, owner, repo, prNumber);
+    if (req.headSha && req.headSha !== pr.headSha) {
+      throw new StaleReviewError('Queued head changed; review superseded.');
+    }
 
     const mirror = join(env.DATA_DIR, 'mirror');
     const mirrored = await mirrorOrgRepos({ octokit, token, owner, mirrorRoot: mirror, db });
@@ -134,6 +140,7 @@ export async function reviewPullRequest(
         event: formatted.event,
         body: formatted.body,
         comments: formatted.comments,
+        assertOwnership: req.assertOwnership,
       });
       writeFileSync(join(pack.dir, 'review.json'), JSON.stringify(review, null, 2));
       console.log(JSON.stringify(review, null, 2));

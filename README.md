@@ -141,3 +141,34 @@ or protect against SDK/CLI vulnerabilities. Do not run Peer alongside untrusted
 local processes or place secrets in the context pack. A dedicated process/container
 boundary is separate deployment hardening. The adversarial tests exercise the
 policy callbacks and option wiring without calling a live model.
+
+### Durable webhook jobs
+
+Webhook mode persists verified `opened`/`synchronize` events to SQLite before
+responding HTTP 202. The delivery ID and `(owner, repo, PR, head SHA)` are deduped.
+Keep `DATA_DIR` on persistent local storage. The queue shares the existing database
+and uses WAL with full synchronous commits; it does not survive deleting that data.
+
+One leased worker drains jobs, including jobs left by a restart. It renews a
+60-second lease every 10 seconds. Retryable pre-post failures get at most three
+attempts with 30/60-second backoff. Expired leases are recovered; exhausted jobs
+remain `failed`. Jobs for a changed head are `superseded`; the head is checked again
+before posting. The GitHub review is pinned to the checked SHA, but a PR can still
+change after that last check. Run `peer jobs` to inspect the latest 100 jobs.
+
+Posting uses an atomic durable claim, shared by CLI and webhook callers, before
+any GitHub review-creation request. Once that request may have started, Peer does
+**not** automatically resend it after a timeout, crash, or response-loss. Such jobs
+remain `blocked` (or become blocked when recovered), and the durable post claim
+remains `uncertain`. This favors no duplicate bot reviews over automatic delivery:
+GitHub review creation has no idempotency key, so Peer does not promise exactly-once
+remote delivery. Automatic Octokit transport and rate-limit retries are disabled on the GitHub App
+client; the queue owns bounded retries before posting.
+
+For a blocked job, an operator must check the PR's reviews at the recorded head
+and reconcile the `review_posts` claim with the actual GitHub result. Do not delete
+an uncertain claim simply because no review is immediately visible: the original
+request may still complete. Peer deliberately provides no blind retry/reset command.
+Multiple hosts must not share this SQLite database over a network filesystem.
+A worker lease fences posting, not hostile/stalled processes accessing mirror files;
+host isolation and immutable context snapshots remain separate hardening.
