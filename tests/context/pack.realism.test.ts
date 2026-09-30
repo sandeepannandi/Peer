@@ -209,7 +209,7 @@ describe('production-realism: context packing under realistic conditions', () =>
     expect(midIdx).toBeLessThan(lowIdx);
   });
 
-  it('handles a single large source file that exceeds the entire budget gracefully', () => {
+  it('reclaims the unused pattern allowance for a large relevant source', () => {
     upsertRepo(db, { owner: 'acme', name: 'big-repo', defaultBranch: 'main' });
     upsertRepo(db, { owner: 'acme', name: 'pr-repo', defaultBranch: 'main' });
 
@@ -239,10 +239,10 @@ describe('production-realism: context packing under realistic conditions', () =>
       workspaceRoot,
     });
 
-    // File is ~30038 bytes > retrievedBudget (20000), so skipped.
+    // File fits the full 40000-character budget with no patterns reserving space.
     const files = contextFiles(pack.dir);
-    expect(files.length).toBe(0);
-    expect(pack.skippedForBudget).toBe(1);
+    expect(files.length).toBe(1);
+    expect(pack.skippedForBudget).toBe(0);
   });
 
   it('cross-repository files from multiple repos survive packing', () => {
