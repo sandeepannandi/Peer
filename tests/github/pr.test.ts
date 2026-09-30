@@ -18,7 +18,14 @@ function stubOctokit(commits: Array<{ sha: string }> = [{ sha: 'abc123' }, { sha
       if (opts.headers?.accept?.includes('diff')) {
         return { data: RAW_DIFF };
       }
-      return { data: { title: 'Add endpoint', body: 'some body', base: { ref: 'main' } } };
+      return {
+        data: {
+          title: 'Add endpoint',
+          body: 'some body',
+          base: { ref: 'main', sha: 'base' },
+          head: { sha: commits.at(-1)?.sha },
+        },
+      };
     },
     paginate: async (route: string) => {
       if (route.includes('/files')) {
@@ -56,6 +63,21 @@ describe('fetchPr', () => {
         patch: '+  return http.get("/api/v2/users");\n+}',
       },
     ]);
+  });
+
+  it('rejects PR heads that change during snapshot acquisition', async () => {
+    const client = stubOctokit();
+    const original = client.request;
+    let reads = 0;
+    client.request = (async (route: string, opts: { headers?: { accept?: string } } = {}) => {
+      const res = await original(route as never, opts as never);
+      if (!opts.headers) {
+        reads++;
+        if (reads === 3) res.data.head.sha = 'changed';
+      }
+      return res;
+    }) as InstallationOctokit['request'];
+    await expect(fetchPr(client, 'acme', 'api', 42)).rejects.toThrow('snapshot changed');
   });
 
   it('throws when the PR has no commits', async () => {
