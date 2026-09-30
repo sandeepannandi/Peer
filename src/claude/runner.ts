@@ -9,6 +9,7 @@ export interface ClaudeRunOptions {
   workspaceDir: string;
   systemPrompt: string;
   prompt: string;
+  validateReview?: (review: Review) => Review;
 }
 
 /** Minimal shape of the SDK query() — injectable for tests. */
@@ -67,10 +68,12 @@ export async function runClaudeReviewWithRetry(
 ): Promise<Review> {
   const first = await runClaudeReview(opts, queryFn);
   try {
-    return parseReviewText(first);
+    const parsed = parseReviewText(first);
+    return opts.validateReview ? opts.validateReview(parsed) : parsed;
   } catch (err) {
     const repair = `${opts.prompt}\n\nYour previous response could not be parsed as a valid review (${(err as Error).message}). Reply with ONLY the corrected JSON object matching the schema — no prose, no markdown fences.`;
     const second = await runClaudeReview({ ...opts, prompt: repair }, queryFn);
-    return parseReviewText(second);
+    const parsed = parseReviewText(second);
+    return opts.validateReview ? opts.validateReview(parsed) : parsed;
   }
 }
