@@ -122,3 +122,22 @@ tests/                22 vitest suites, 95 tests, bundled fixture repos
 ## License
 
 [MIT](LICENSE)
+
+### Reviewer tool boundary
+
+The Claude reviewer has only `Read`, `Grep`, and `Glob` available. A `PreToolUse`
+hook checks every call before the SDK's automatic read permissions: paths must
+stay inside the job's packed workspace, refer to existing regular files or
+directories, and contain no symlinks. Recursive searches reject trees containing
+symlinks or special files. Unknown tools and unsafe glob patterns fail closed.
+The runner does not use `bypassPermissions`; filesystem settings, skills, plugins,
+and ambient MCP server configuration are disabled for each attempt, including
+JSON-repair retries. Subscription authentication is unchanged.
+
+This is an SDK tool policy, **not an operating-system sandbox**. The host must own
+and protect the packed workspace from concurrent modification. Path checks cannot
+prevent a hostile local process from swapping a file between validation and use,
+or protect against SDK/CLI vulnerabilities. Do not run Peer alongside untrusted
+local processes or place secrets in the context pack. A dedicated process/container
+boundary is separate deployment hardening. The adversarial tests exercise the
+policy callbacks and option wiring without calling a live model.
