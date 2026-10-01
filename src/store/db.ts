@@ -100,8 +100,7 @@ export function upsertRepo(db: Db, repo: NewRepo): number {
 
 export function getRepoId(db: Db, owner: string, name: string): number | undefined {
   const row = db.prepare('SELECT id FROM repos WHERE owner = ? AND name = ?').get(owner, name) as
-    | { id: number }
-    | undefined;
+    { id: number } | undefined;
   return row?.id;
 }
 
