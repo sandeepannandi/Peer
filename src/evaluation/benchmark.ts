@@ -121,7 +121,9 @@ export function evaluateRetrieval(data: EvaluationSet) {
         mkdirSync(dirname(path), { recursive: true });
         writeFileSync(path, content);
       }
-      const db = openDb(join(dir, 'index.db'));
+      // Each case has an isolated, disposable index. An in-memory database
+      // avoids durable WAL/fsync work without changing indexing or retrieval.
+      const db = openDb(':memory:');
       try {
         for (const repo of ['service', 'consumer'])
           upsertRepo(db, { owner: 'eval', name: repo, defaultBranch: 'main' });
