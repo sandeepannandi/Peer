@@ -60,8 +60,7 @@ export function claimJob(db: Db, now = Date.now()): { token: string; job: Review
   return db
     .transaction(() => {
       const lock = db.prepare('SELECT expires_at FROM review_worker WHERE id = 1').get() as
-        | { expires_at: number }
-        | undefined;
+        { expires_at: number } | undefined;
       if (lock && lock.expires_at > now) return null;
       db.prepare(
         `UPDATE review_jobs SET state = CASE WHEN EXISTS (SELECT 1 FROM review_posts p WHERE p.owner = review_jobs.owner
