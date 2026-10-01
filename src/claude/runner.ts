@@ -29,7 +29,8 @@ export async function runClaudeReview(
       systemPrompt: opts.systemPrompt,
       model: opts.env.CLAUDE_MODEL,
       cwd: opts.workspaceDir,
-      allowedTools: [...READ_ONLY_TOOLS],
+      // Bare allowedTools entries bypass canUseTool in the CLI. Keep the
+      // tool inventory, but let both permission and hook guards inspect calls.
       tools: [...READ_ONLY_TOOLS],
       permissionMode: 'default',
       canUseTool: policy.canUseTool,

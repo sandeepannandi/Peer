@@ -54,7 +54,7 @@ describe('security: agent permission configuration', () => {
     await runClaudeReview(opts(), fakeQuery(calls));
 
     const options = calls.options[0];
-    expect(options?.allowedTools).toEqual(['Read', 'Grep', 'Glob']);
+    expect(options?.allowedTools).toBeUndefined();
   });
 
   it('permission bypass is disabled and every tool call is guarded', async () => {
